@@ -1,0 +1,245 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noodle Knocker - The Learn to Party Game!</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.1/css/bulma.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+    <style>
+        .page {
+            display: none;
+        }
+        .page.is-active {
+            display: block;
+        }
+        .footer {
+            padding: 1rem 1.5rem 1rem;
+        }
+        .avatar-image {
+            max-width: 200px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar is-primary" role="navigation" aria-label="main navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="#config">
+                <strong>Ed2.AI Party Game</strong>
+            </a>
+        </div>
+    </nav>
+
+    <section class="section">
+        <div class="container">
+            <!-- Config Page -->
+            <div id="config" class="page is-active">
+                <h1 class="title is-1 has-text-centered">Game Configuration</h1>
+                <div class="columns is-centered">
+                    <div class="column is-half">
+                        <div class="field">
+                            <label class="label">Number of Players</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select id="playerCount">
+                                        <option>1</option>
+                                        <option>2</option>
+                                        <option>3</option>
+                                        <option>4</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="playerNames">
+                            <!-- Player name inputs will be dynamically added here -->
+                        </div>
+                        <div class="field">
+                            <label class="label">Difficulty</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select id="difficulty">
+                                        <option>Easy</option>
+                                        <option>Normal</option>
+                                        <option>Hard</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="control">
+                                <button class="button is-primary is-fullwidth" onclick="showPage('study')">Start Game</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Study Page -->
+            <div id="study" class="page">
+                <h1 class="title is-1 has-text-centered">Study</h1>
+                <div class="columns is-centered">
+                    <div class="column is-two-thirds">
+                        <figure class="image is-16by9">
+                            <img src="/api/placeholder/800/450" alt="Study material">
+                        </figure>
+                        <p class="has-text-centered mt-4">Caption area for study material</p>
+                        <div class="buttons is-centered mt-4">
+                            <button class="button is-warning" onclick="showPage('config')">Restart</button>
+                            <button class="button is-primary" onclick="showPage('ready')">Continue</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ready Page -->
+            <div id="ready" class="page">
+                <h1 class="title is-1 has-text-centered">Get Ready</h1>
+                <div class="columns is-centered">
+                    <div class="column is-half">
+                        <figure class="image avatar-image">
+                            <img src="/api/placeholder/200/200" alt="Avatar">
+                        </figure>
+                        <p class="has-text-centered mt-4">Avatar caption</p>
+                        <div class="buttons is-centered mt-4" id="talkButtons">
+                            <!-- Talk buttons will be dynamically added here -->
+                        </div>
+                        <button class="button is-primary is-fullwidth mt-4" onclick="showPage('teach')">Continue</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teach Page -->
+            <div id="teach" class="page">
+                <h1 class="title is-1 has-text-centered">Teach</h1>
+                <div class="columns is-centered">
+                    <div class="column is-two-thirds">
+                        <div class="level">
+                            <div class="level-left">
+                                <div class="level-item">
+                                    <h2 class="subtitle">Player 1's Turn</h2>
+                                </div>
+                            </div>
+                            <div class="level-right">
+                                <div class="level-item">
+                                    <span id="timer" class="tag is-primary is-large">03:00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column is-two-thirds">
+                                <figure class="image avatar-image">
+                                    <img src="/api/placeholder/200/200" alt="Avatar">
+                                </figure>
+                                <p class="has-text-centered mt-4">Avatar caption</p>
+                            </div>
+                            <div class="column">
+                                <div class="box">
+                                    <p>Avatar description goes here. This is a paragraph-length description of the avatar.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="buttons is-centered mt-4">
+                            <button class="button is-primary" id="talkButton">Talk</button>
+                            <button class="button is-primary" onclick="showPage('quiz')">Continue</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Page -->
+            <div id="quiz" class="page">
+                <h1 class="title is-1 has-text-centered">Quiz</h1>
+                <h2 class="subtitle has-text-centered">Player 1's Turn</h2>
+                <div class="columns is-centered">
+                    <div class="column is-half">
+                        <div class="columns">
+                            <div class="column">
+                                <figure class="image avatar-image">
+                                    <img src="/api/placeholder/150/150" alt="Avatar 1">
+                                </figure>
+                                <p class="has-text-centered mt-2">Avatar 1 caption</p>
+                            </div>
+                            <div class="column">
+                                <figure class="image avatar-image">
+                                    <img src="/api/placeholder/150/150" alt="Avatar 2">
+                                </figure>
+                                <p class="has-text-centered mt-2">Avatar 2 caption</p>
+                            </div>
+                        </div>
+                        <div class="has-text-centered mt-4">
+                            <h2 class="title is-2">Score: <span id="score">0</span></h2>
+                        </div>
+                        <button class="button is-primary is-fullwidth mt-4" onclick="showPage('results')">Continue</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Page -->
+            <div id="results" class="page">
+                <h1 class="title is-1 has-text-centered">Results</h1>
+                <div class="columns is-centered">
+                    <div class="column is-half">
+                        <table class="table is-fullwidth">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard">
+                                <!-- Leaderboard rows will be dynamically added here -->
+                            </tbody>
+                        </table>
+                        <button class="button is-primary is-fullwidth mt-4" onclick="showPage('config')">Play Again</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Page -->
+            <div id="help" class="page">
+                <h1 class="title is-1 has-text-centered">Help</h1>
+                <div class="columns is-centered">
+                    <div class="column is-two-thirds">
+                        <div class="content">
+                            <h2>Game Rules</h2>
+                            <p>Explain the rules of the game here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Page -->
+            <div id="about" class="page">
+                <h1 class="title is-1 has-text-centered">About</h1>
+                <div class="columns is-centered">
+                    <div class="column is-two-thirds">
+                        <div class="content">
+                            <p>Ed2.AI Party Game is an exciting online multiplayer game designed to challenge your knowledge and communication skills. Compete with friends, learn new facts, and have fun in this unique educational experience!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="content has-text-centered">
+            <p>
+                <a href="#help">Help</a> | <a href="#about">About</a>
+            </p>
+            <p>Copyright 2024 by Ed2.AI LLC</p>
+        </div>
+    </footer>
+
+    <script>
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
+            document.getElementById(pageId).classList.add('is-active');
+        }
+
+        // Add more JavaScript for dynamic content and interactivity
+    </script>
+</body>
+</html>

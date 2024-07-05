@@ -1,3 +1,5 @@
+import homeHtml from "./html/index.html";
+
 import { DurableObject } from "cloudflare:workers";
 
 /**
@@ -52,6 +54,25 @@ export default {
 	 * @returns {Promise<Response>} The response to be sent back to the client
 	 */
 	async fetch(request, env, ctx) {
+		try {
+			const url = new URL(request.url);
+			if (url.pathname === "/") {
+				return new Response(homeHtml, { headers: { 'content-type': 'text/html' } });
+			} else {
+				return new Response("Not found.", { 
+					status: 404,
+					headers: { 'content-type': 'text/plain' }
+				});				
+			}
+		} catch (e) {
+			console.log(e);
+			return new Response(e, { 
+				status: 500,
+				headers: { 'content-type': 'text/plain' }
+			});
+		}
+
+
 		// We will create a `DurableObjectId` using the pathname from the Worker request
 		// This id refers to a unique instance of our 'MyDurableObject' class above
 		let id = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
