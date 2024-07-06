@@ -45,6 +45,8 @@ export class MyDurableObject extends DurableObject {
 }
 
 export default {
+
+	
 	/**
 	 * This is the standard fetch handler for a Cloudflare Worker
 	 *
@@ -58,6 +60,14 @@ export default {
 			const url = new URL(request.url);
 			if (url.pathname === "/") {
 				return new Response(homeHtml, { headers: { 'content-type': 'text/html' } });
+			} else if (url.pathname.startsWith("/api/")) {
+				const command = url.pathname.replace("/api/", "");
+				const inData = JSON.parse(await request.text());
+				console.log(command, inData);
+
+				return new Response(JSON.stringify({
+					success: true
+				}));
 			} else {
 				return new Response("Not found.", { 
 					status: 404,

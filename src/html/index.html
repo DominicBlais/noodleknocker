@@ -27,7 +27,7 @@
     <nav class="navbar is-primary" role="navigation" aria-label="main navigation">
         <div class="navbar-brand">
             <a class="navbar-item" href="#config">
-                <strong>Ed2.AI Party Game</strong>
+                <strong>Noodle Knocker - The Learn to Party Game!</strong>
             </a>
         </div>
     </nav>
@@ -43,26 +43,32 @@
                             <label class="label">Number of Players</label>
                             <div class="control">
                                 <div class="select is-fullwidth">
-                                    <select id="playerCount">
-                                        <option>1</option>
-                                        <option>2</option>
-                                        <option>3</option>
-                                        <option>4</option>
+                                    <select id="playerCount" onchange="updatePlayerInputs()">
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
-                        <div id="playerNames">
+                        <div id="playerNames" class="mb-6">
                             <!-- Player name inputs will be dynamically added here -->
+                            <div class="field player-name-field">
+                                <label class="label">Player 1 Name</label>
+                                <div class="control">
+                                    <input class="input" type="text" placeholder="Enter player name" value="Player 1">
+                                </div>
+                            </div>
                         </div>
-                        <div class="field">
+                        <div class="field mb-6">
                             <label class="label">Difficulty</label>
                             <div class="control">
                                 <div class="select is-fullwidth">
                                     <select id="difficulty">
-                                        <option>Easy</option>
-                                        <option>Normal</option>
-                                        <option>Hard</option>
+                                        <option value="easy">Easy</option>
+                                        <option selected value="normal">Normal</option>
+                                        <option value="hard">Hard</option>
                                     </select>
                                 </div>
                             </div>
@@ -227,19 +233,137 @@
     <footer class="footer">
         <div class="content has-text-centered">
             <p>
-                <a href="#help">Help</a> | <a href="#about">About</a>
+                <a onclick="showHelp()">Help</a> | <a onclick="showAbout()">About</a>
             </p>
             <p>Copyright 2024 by Ed2.AI LLC</p>
         </div>
     </footer>
 
     <script>
-        function showPage(pageId) {
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
-            document.getElementById(pageId).classList.add('is-active');
+        const playerNames = {
+            player1Name: 'Player 1',
+            player2Name: 'Player 2',
+            player3Name: 'Player 3',
+            player4Name: 'Player 4'
+        };
+        
+        let playerCount = 1;
+        let difficulty = 'normal';
+
+
+        async function callApi(command, data) {
+            const response = await fetch('/api/' + command, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            return response.json();
         }
 
-        // Add more JavaScript for dynamic content and interactivity
+
+        async function showPage(pageId) {
+            if (pageId === 'config') {
+                await gotoConfigPage();
+            } else if (pageId === 'study') {
+                await gotoStudyPage();
+            } else if (pageId === 'ready') {
+                await gotoReadyPage();
+            } else if (pageId === 'teach') {
+                await gotoTeachPage();
+            } else if (pageId === 'quiz') {
+                await gotoQuizPage();
+            } else if (pageId === 'results') {
+                await gotoResultsPage();
+            }
+        }
+
+        function showHelp() {
+            // this should be modal so it doesn't throw off the game
+            showPage('help');
+        }
+
+        function showAbout() {
+            showPage('about');
+        }
+        
+        function updatePlayerInputs() {
+            playerCount = parseInt(document.getElementById('playerCount').value);
+            const playerNamesDiv = document.getElementById('playerNames');
+            
+            for (let i = 1; i <= 4; i++) {
+                const input = document.getElementById(`player${i}Name`);
+                if (input) {
+                    playerNames[`player${i}Name`] = input.value;
+                }
+            }
+            
+            playerNamesDiv.innerHTML = '';
+            for (let i = 1; i <= playerCount; i++) {
+                const playerField = document.createElement('div');
+                playerField.className = 'field player-name-field';
+                playerField.innerHTML = `
+                    <label class="label">Player ${i} Name</label>
+                    <div class="control">
+                        <input class="input" type="text" placeholder="Enter player name" id="player${i}Name" value="${playerNames[`player${i}Name`]}">
+                    </div>
+                `;
+                playerNamesDiv.appendChild(playerField);
+            }
+        }
+
+        async function gotoConfigPage() {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
+            document.getElementById('config').classList.add('is-active');
+
+        }
+
+
+        async function gotoStudyPage() {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
+            document.getElementById('study').classList.add('is-active');
+
+            updatePlayerInputs();
+            difficulty = document.getElementById('difficulty').value;
+
+            const response = await callApi('conceptualize', {
+                playerCount: playerCount,
+                difficulty: difficulty
+            });
+            console.log(response);
+            // xxx
+
+        }
+
+        async function gotoReadyPage() {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
+            document.getElementById('ready').classList.add('is-active');
+
+        }
+
+        async function gotoTeachPage() {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
+            document.getElementById('teach').classList.add('is-active');
+
+        }
+
+        async function gotoQuizPage() {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
+            document.getElementById('quiz').classList.add('is-active');
+
+        }
+
+        async function gotoResultsPage() {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
+            document.getElementById('results').classList.add('is-active');
+
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePlayerInputs();
+        });
+
     </script>
 </body>
 </html>
