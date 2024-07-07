@@ -234,9 +234,9 @@
         <div class="modal-background"></div>
         <div class="modal-content">
             <div class="box">
-                <h2>Generating...</h2>
-                <b>Concept: </b><span class="concept-label"></b>
-                <p id="start-game-modal-trivia"></p>
+                <h1>Generating...</h1>
+                <b>Concept: </b><span class="concept-label"></span>
+                <div class="concept-trivia"></div>
             </div>
         </div>
     </div>
@@ -292,52 +292,6 @@
                 'cmd': cmd,
                 ...data
             }))
-        }
-
-        function setupWebSocket() {
-            if (window.location.protocol === 'https:') {
-                ws = new WebSocket('wss://' + window.location.host + '/ws');
-            } else {
-                ws = new WebSocket('ws://' + window.location.host + '/ws');
-            }
-
-            ws.onopen = function (event) {
-                console.log('opening...');
-            };
-
-            ws.onmessage = function (event) {
-                const jsonData = JSON.parse(event.data);
-                console.log(jsonData);
-                const cmd = jsonData['cmd'];
-                if (cmd === Commands.GENERATE_STARTED) {
-                    concept = jsonData['concept'];
-                    document.querySelectorAll('.concept-label').forEach(element => {
-                        element.innerText = concept;
-                    });
-                    const triviaItems = jsonData['trivia'];
-                    let triviaIndex = 0;
-                    function setNextTrivia() {
-                        if (state === States.WAITING_FOR_GENERATION) {
-                            triviaIndex = (triviaIndex + 1) % triviaItems.length;
-                            const startGameModalTrivia = document.getElementById('start-game-modal-trivia');
-                            console.log(startGameModalTrivia);
-                            startGameModalTrivia.innerHTML = triviaItems[triviaIndex];
-                            setTimeout(setNextTrivia, 5000);
-                        }
-                    }
-                    setNextTrivia();
-                } else if (cmd === commands.GENERATE_DONE) {
-                    document.getElementById('waiting-to-start-game-modal').classList.remove('is-active');
-                    state = States.STUDYING;
-                    // TODO: start presentation...                    
-                }
-            };
-
-            ws.onclose = function (event) {
-                console.log('closing...');
-                console.log(event);
-            };
-
         }
 
         async function showPage(pageId) {
@@ -406,12 +360,13 @@
             difficulty = document.getElementById('difficulty').value;
 
             document.getElementById('waiting-to-start-game-modal').classList.add('is-active');
+
+            state = States.WAITING_FOR_GENERATION;
+
             sendCmd(Commands.GENERATE, {
                 'playerCount': playerCount,
                 'difficulty': difficulty
-            });
-
-            state = States.WAITING_FOR_GENERATION;
+            });            
         }
 
         async function gotoReadyPage() {
@@ -439,7 +394,53 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            setupWebSocket();
+            if (window.location.protocol === 'https:') {
+                ws = new WebSocket('wss://' + window.location.host + '/ws');
+            } else {
+                ws = new WebSocket('ws://' + window.location.host + '/ws');
+            }
+
+            ws.onopen = function (event) {
+                console.log('opening...');
+            };
+
+            
+            ws.onmessage = function (event) {
+                const jsonData = JSON.parse(event.data);
+                console.log(jsonData);
+                const cmd = jsonData['cmd'];
+                if (cmd === Commands.GENERATE_STARTED) {
+                    concept = jsonData['concept'];
+                    document.querySelectorAll('.concept-label').forEach(element => {
+                        element.innerText = concept;
+                    });
+                    const triviaItems = jsonData['trivia'];
+                    let triviaIndex = 0;
+                    function setNextTrivia() {
+                        if (state === States.WAITING_FOR_GENERATION) {
+                            triviaIndex = (triviaIndex + 1) % triviaItems.length;
+                            document.querySelectorAll('.concept-trivia').forEach(element => {
+                                element.innerText = triviaItems[triviaIndex];
+                            });
+                            setTimeout(setNextTrivia, 5000);
+                        }
+                    }
+                    setNextTrivia();
+                } else if (cmd === commands.GENERATE_DONE) {
+                    console.log(jsonData);
+                    document.getElementById('waiting-to-start-game-modal').classList.remove('is-active');
+                    state = States.STUDYING;
+
+                    // TODO: start presentation...                    
+                }
+            };
+
+            ws.onclose = function (event) {
+                console.log('closing...');
+                console.log(event);
+            };
+
+
             updatePlayerInputs();
         });
 
