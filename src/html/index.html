@@ -230,6 +230,17 @@
         </div>
     </section>
 
+    <div id="waiting-to-start-game-modal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="box">
+                <h2>Generating...</h2>
+                <b>Concept: </b><span class="concept-label"></b>
+                <p id="start-game-modal-trivia"></p>
+            </div>
+        </div>
+    </div>
+
     <footer class="footer">
         <div class="content has-text-centered">
             <p>
@@ -240,6 +251,8 @@
     </footer>
 
     <script>
+
+
         const playerNames = {
             player1Name: 'Player 1',
             player2Name: 'Player 2',
@@ -249,19 +262,83 @@
         
         let playerCount = 1;
         let difficulty = 'normal';
+        let concept = 'none';
 
-
-        async function callApi(command, data) {
-            const response = await fetch('/api/' + command, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            return response.json();
+        const Commands = {
+            GENERATE: 'generate',
+            GENERATE_STARTED: 'generate-started',
+            GENERATE_DONE: 'generate-done',
         }
 
+        const Difficulties = {
+            EASY: 'easy',
+            NORMAL: 'normal',
+            HARD: 'hard',
+        }
+
+        const States = {
+            PLAYER_SETUP: 'player-setup',
+            WAITING_FOR_GENERATION: 'waiting-for-generation',
+            STUDYING: 'studying'
+        }
+        
+
+        let state = States.PLAYER_SETUP;
+
+        let ws;
+
+        function sendCmd(cmd, data) {
+            ws.send(JSON.stringify({
+                'cmd': cmd,
+                ...data
+            }))
+        }
+
+        function setupWebSocket() {
+            if (window.location.protocol === 'https:') {
+                ws = new WebSocket('wss://' + window.location.host + '/ws');
+            } else {
+                ws = new WebSocket('ws://' + window.location.host + '/ws');
+            }
+
+            ws.onopen = function (event) {
+                console.log('opening...');
+            };
+
+            ws.onmessage = function (event) {
+                const jsonData = JSON.parse(event.data);
+                console.log(jsonData);
+                const cmd = jsonData['cmd'];
+                if (cmd === Commands.GENERATE_STARTED) {
+                    concept = jsonData['concept'];
+                    document.querySelectorAll('.concept-label').forEach(element => {
+                        element.innerText = concept;
+                    });
+                    const triviaItems = jsonData['trivia'];
+                    let triviaIndex = 0;
+                    function setNextTrivia() {
+                        if (state === States.WAITING_FOR_GENERATION) {
+                            triviaIndex = (triviaIndex + 1) % triviaItems.length;
+                            const startGameModalTrivia = document.getElementById('start-game-modal-trivia');
+                            console.log(startGameModalTrivia);
+                            startGameModalTrivia.innerHTML = triviaItems[triviaIndex];
+                            setTimeout(setNextTrivia, 5000);
+                        }
+                    }
+                    setNextTrivia();
+                } else if (cmd === commands.GENERATE_DONE) {
+                    document.getElementById('waiting-to-start-game-modal').classList.remove('is-active');
+                    state = States.STUDYING;
+                    // TODO: start presentation...                    
+                }
+            };
+
+            ws.onclose = function (event) {
+                console.log('closing...');
+                console.log(event);
+            };
+
+        }
 
         async function showPage(pageId) {
             if (pageId === 'config') {
@@ -313,10 +390,11 @@
             }
         }
 
+
         async function gotoConfigPage() {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('config').classList.add('is-active');
-
+            state = States.PLAYER_SETUP;
         }
 
 
@@ -327,13 +405,13 @@
             updatePlayerInputs();
             difficulty = document.getElementById('difficulty').value;
 
-            const response = await callApi('conceptualize', {
-                playerCount: playerCount,
-                difficulty: difficulty
+            document.getElementById('waiting-to-start-game-modal').classList.add('is-active');
+            sendCmd(Commands.GENERATE, {
+                'playerCount': playerCount,
+                'difficulty': difficulty
             });
-            console.log(response);
-            // xxx
 
+            state = States.WAITING_FOR_GENERATION;
         }
 
         async function gotoReadyPage() {
@@ -361,6 +439,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            setupWebSocket();
             updatePlayerInputs();
         });
 

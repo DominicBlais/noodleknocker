@@ -1,73 +1,161 @@
-import homeHtml from "./html/index.html";
 
 import { DurableObject } from "cloudflare:workers";
 
-/**
- * Welcome to Cloudflare Workers! This is your first Durable Objects application.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your Durable Object in action
- * - Run `npm run deploy` to publish your application
- *
- * Learn more at https://developers.cloudflare.com/durable-objects
- */
+import Anthropic from '@anthropic-ai/sdk';
 
-/**
- * Env provides a mechanism to reference bindings declared in wrangler.toml within JavaScript
- *
- * @typedef {Object} Env
- * @property {DurableObjectNamespace} MY_DURABLE_OBJECT - The Durable Object namespace binding
- */
+import homeHtml from "./html/index.html";
+import conceptFieldPairs from "./concept_field_pairs";
 
-/** A Durable Object's behavior is defined in an exported Javascript class */
-export class MyDurableObject extends DurableObject {
-	/**
-	 * The constructor is invoked once upon creation of the Durable Object, i.e. the first call to
-	 * 	`DurableObjectStub::get` for a given identifier (no-op constructors can be omitted)
-	 *
-	 * @param {DurableObjectState} ctx - The interface for interacting with Durable Object state
-	 * @param {Env} env - The interface to reference bindings declared in wrangler.toml
-	 */
-	constructor(ctx, env) {
-		super(ctx, env);
+// 94.28
+
+const Commands = {
+	GENERATE: 'generate',
+	GENERATE_STARTED: 'generate-started',
+	GENERATE_DONE: 'generate-done',
+}
+
+const Difficulties = {
+	EASY: 'easy',
+	NORMAL: 'normal',
+	HARD: 'hard',
+}
+
+const Prompts = {
+	CREATE_TRIVIA: 'Please create 2 to 5 short trivia sentences related to the concept "{{CONCEPT}}" within the field of study, {{FIELD_OF_STUDY}}. The trivia sentences should be factual and humorous, bizarre, or otherwise interesting.',
+}
+
+const Schema = {
+	CREATE_TRIVIA: {
+		type: 'object',
+		properties: {
+			trivia: {
+				type: 'array',
+				description: 'Humorous, bizarre, or otherwise interesting trivia related to the concept',
+				items: {
+					type: 'string',
+					description: 'A single short trivia sentence'
+				}
+			},
+		},
+		description: 'Humorous, bizarre, or otherwise interesting trivia related to the concept',
+		required: ['trivia']
+	}
+}
+
+
+export class NoodleKnockerDurableObject extends DurableObject {
+	counter = 0;
+	difficulty = Difficulties.NORMAL;
+	playerCount = 1;
+	anthropic;
+	ws;
+	concept;
+	fieldOfStudy;
+
+	async fetch(request) {
+		const webSocketPair = new WebSocketPair();
+		const [client, server] = Object.values(webSocketPair);
+		this.ctx.acceptWebSocket(server);
+		this.ws = server;
+
+		this.anthropic = new Anthropic({
+			apiKey: this.env.ANTHROPIC_API_KEY
+		});
+
+		return new Response(null, {
+			status: 101,
+			webSocket: client,
+		});
 	}
 
-	/**
-	 * The Durable Object exposes an RPC method sayHello which will be invoked when when a Durable
-	 *  Object instance receives a request from a Worker via the same method invocation on the stub
-	 *
-	 * @param {string} name - The name provided to a Durable Object instance from a Worker
-	 * @returns {Promise<string>} The greeting to be sent back to the Worker
-	 */
-	async sayHello(name) {
-		return `Hello, ${name}!`;
+	sendCmd(cmd, data) {
+		console.log(cmd, data);
+		this.ws.send(JSON.stringify({
+			'cmd': cmd,
+			...data
+		}))
 	}
+
+	convertToolInput(response) {
+		if (response.stop_reason == 'tool_use') {
+			for (let i = 0; i < response.content.length; i++) {
+				if (response.content[i].type == 'tool_use') {
+					return response.content[i].input;
+				} 
+			}
+		}
+		throw new Error('Failed to convert tool input');
+	}
+
+	async handleGenerateConcept() {
+		const conceptFieldIndex = Math.floor(Math.random() * conceptFieldPairs.length);
+		this.fieldOfStudy = conceptFieldPairs[conceptFieldIndex][0];
+		this.concept = conceptFieldPairs[conceptFieldIndex][1];
+		const prompt = Prompts.CREATE_TRIVIA
+			.replace(/{{CONCEPT}}/g, this.concept)
+			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy);
+		const response = await this.anthropic.messages.create({
+			model: 'claude-3-5-sonnet-20240620',
+			max_tokens: 1024,
+			messages: [{
+				role: 'user',
+				content: prompt
+			}],
+			tools: [{
+				name: 'create_trivia',
+				description: 'Create 2 to 5 short trivia sentences related to the concept, ' + this.concept,
+				input_schema: Schema.CREATE_TRIVIA
+			}],
+			tool_choice: { type: 'tool', name: 'create_trivia' },
+		});
+		console.log(response);
+		this.sendCmd(Commands.GENERATE_STARTED, {
+			concept: this.concept,
+			fieldOfStudy: this.fieldOfStudy,
+			trivia: this.convertToolInput(response).trivia
+		});
+	}
+
+
+	async webSocketMessage(ws, message) {
+		console.log("Message", message);
+		try {
+			var jsonData = JSON.parse(message);
+			console.log(jsonData.cmd);
+			if (jsonData.cmd === Commands.GENERATE) {
+				this.difficulty = jsonData.difficulty;
+				this.playerCount = jsonData.playerCount;
+				await this.handleGenerateConcept();
+			} else if (data.event === "close") {
+				console.log("Close", data);
+				ws.close();
+			}
+		} catch (err) {
+			console.error(err);
+		}
+	}
+
+	async webSocketClose(ws, code, reason, wasClean) {
+		ws.close(1000, "Closing WebSocket");
+	}
+
 }
 
 export default {
 
-	
-	/**
-	 * This is the standard fetch handler for a Cloudflare Worker
-	 *
-	 * @param {Request} request - The request submitted to the Worker from the client
-	 * @param {Env} env - The interface to reference bindings declared in wrangler.toml
-	 * @param {ExecutionContext} ctx - The execution context of the Worker
-	 * @returns {Promise<Response>} The response to be sent back to the client
-	 */
 	async fetch(request, env, ctx) {
 		try {
 			const url = new URL(request.url);
 			if (url.pathname === "/") {
 				return new Response(homeHtml, { headers: { 'content-type': 'text/html' } });
-			} else if (url.pathname.startsWith("/api/")) {
-				const command = url.pathname.replace("/api/", "");
-				const inData = JSON.parse(await request.text());
-				console.log(command, inData);
-
-				return new Response(JSON.stringify({
-					success: true
-				}));
+			} else if (url.pathname == "/ws") {
+				const upgradeHeader = request.headers.get('Upgrade');
+				if (!upgradeHeader || upgradeHeader !== 'websocket') {
+					return new Response('Expected Upgrade: websocket', { status: 426 });
+				}	
+				const id = env.NOODLE_KNOCKER_DURABLE_OBJECT.newUniqueId();
+				const stub = env.NOODLE_KNOCKER_DURABLE_OBJECT.get(id);
+				return stub.fetch(request);
 			} else {
 				return new Response("Not found.", { 
 					status: 404,
@@ -75,26 +163,11 @@ export default {
 				});				
 			}
 		} catch (e) {
-			console.log(e);
+			console.error(e);
 			return new Response(e, { 
 				status: 500,
 				headers: { 'content-type': 'text/plain' }
 			});
 		}
-
-
-		// We will create a `DurableObjectId` using the pathname from the Worker request
-		// This id refers to a unique instance of our 'MyDurableObject' class above
-		let id = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
-
-		// This stub creates a communication channel with the Durable Object instance
-		// The Durable Object constructor will be invoked upon the first call for a given id
-		let stub = env.MY_DURABLE_OBJECT.get(id);
-
-		// We call the `sayHello()` RPC method on the stub to invoke the method on the remote
-		// Durable Object instance
-		let greeting = await stub.sayHello("world");
-
-		return new Response(greeting);
 	},
 };
