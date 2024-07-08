@@ -2,7 +2,8 @@
 name = "noodleknocker"
 main = "src/index.js"
 compatibility_date = "2024-07-01"
-compatibility_flags = [ "nodejs_compat" ]
+node_compat = true
+
 
 [vars]
 DEEPGRAM_PROJECT_ID = "db0a98ee-63a5-476e-b84f-e300a162f274"

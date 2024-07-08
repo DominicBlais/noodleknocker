@@ -11,6 +11,7 @@
     "wrangler": "^3.60.3"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.24.3"
+    "@anthropic-ai/sdk": "^0.24.3",
+    "websocket": "^1.0.35"
   }
 }

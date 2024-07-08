@@ -80,10 +80,12 @@
         </div>
     </nav>
 
+    <audio id="voice-player" class="is-hidden"></audio>
+
     <section class="section">
         <div class="container">
             <!-- Config Page -->
-            <div id="config" class="page is-active">
+            <div id="config" class="page">
                 <h1 class="title is-1 has-text-centered">Game Configuration</h1>
                 <div class="columns is-centered">
                     <div class="column is-half">
@@ -131,7 +133,7 @@
             </div>
 
             <!-- Study Page -->
-            <div id="study" class="page">
+            <div id="study" class="page is-active">
                 <h1 class="title is-3 has-text-centered concept-label">Concept Here</h1>
                 <div class="columns is-centered">
                     <div class="column is-two-thirds">
@@ -334,11 +336,16 @@
         let presentation = null;
         let currentSlideIndex = 0;
         let currentSlide;
+        let audioKey;
+        let audioEndpoint;
+        let professorVoice;
 
         const Commands = {
             GENERATE: 'generate',
             GENERATE_STARTED: 'generate-started',
             GENERATE_DONE: 'generate-done',
+            TTS: 'tts',
+            SAY: 'say'
         }
 
         const Difficulties = {
@@ -352,11 +359,28 @@
             WAITING_FOR_GENERATION: 'waiting-for-generation',
             STUDYING: 'studying'
         }
+
+        const Speakers = {
+            PROFESSOR: 'professor',
+            PLAYER1: 'player 1',
+            PLAYER2: 'player 2',
+            PLAYER3: 'player 3',
+            PLAYER4: 'player 4'
+        }
         
 
         let state = States.PLAYER_SETUP;
 
         let ws;
+
+
+        function tts(text, speaker) {
+            sendCmd(Commands.TTS, {
+                text: text,
+                speaker: speaker
+            });
+        }
+
 
         function sendCmd(cmd, data) {
             ws.send(JSON.stringify({
@@ -427,19 +451,6 @@
             document.getElementById('study').classList.add('is-active');
         }
 
-
-        async function startGame() {
-            updatePlayerInputs();
-            difficulty = document.getElementById('difficulty').value;
-            document.getElementById('concept-trivia').innerText = 'Generating...';
-            document.getElementById('waiting-to-start-game-modal').classList.add('is-active');
-            state = States.WAITING_FOR_GENERATION;
-            sendCmd(Commands.GENERATE, {
-                'playerCount': playerCount,
-                'difficulty': difficulty
-            });            
-        }
-
         async function gotoReadyPage() {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('ready').classList.add('is-active');
@@ -462,6 +473,18 @@
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('results').classList.add('is-active');
 
+        }
+
+        async function startGame() {
+            updatePlayerInputs();
+            difficulty = document.getElementById('difficulty').value;
+            document.getElementById('concept-trivia').innerText = 'Generating...';
+            document.getElementById('waiting-to-start-game-modal').classList.add('is-active');
+            state = States.WAITING_FOR_GENERATION;
+            sendCmd(Commands.GENERATE, {
+                'playerCount': playerCount,
+                'difficulty': difficulty
+            });            
         }
 
         function showSlide(slideIndex) {
@@ -512,39 +535,45 @@
 
             
             ws.onmessage = function (event) {
-                const jsonData = JSON.parse(event.data);
-                const cmd = jsonData['cmd'];
-                if (cmd === Commands.GENERATE_STARTED) {
-                    console.log(jsonData);
-                    concept = jsonData['concept'];
-                    document.querySelectorAll('.concept-label').forEach(element => {
-                        element.innerText = concept;
-                    });
-                    const triviaItems = jsonData['trivia'];
-                    let triviaIndex = 0;
-                    function setNextTrivia() {
-                        if (state === States.WAITING_FOR_GENERATION) {
-                            triviaIndex = (triviaIndex + 1) % triviaItems.length;
-                            document.getElementById('concept-trivia').innerText = triviaItems[triviaIndex];
-                            setTimeout(setNextTrivia, 8000);
+                if (typeof event.data === 'string') {                    
+                    const jsonData = JSON.parse(event.data);
+                    const cmd = jsonData['cmd'];
+                    if (cmd === Commands.GENERATE_STARTED) {
+                        console.log(jsonData);
+                        concept = jsonData['concept'];
+                        document.querySelectorAll('.concept-label').forEach(element => {
+                            element.innerText = concept;
+                        });
+                        const triviaItems = jsonData['trivia'];
+                        let triviaIndex = 0;
+                        function setNextTrivia() {
+                            if (state === States.WAITING_FOR_GENERATION) {
+                                triviaIndex = (triviaIndex + 1) % triviaItems.length;
+                                document.getElementById('concept-trivia').innerText = triviaItems[triviaIndex];
+                                setTimeout(setNextTrivia, 8000);
+                            }
                         }
+                        setNextTrivia();
+                    } else if (cmd === Commands.GENERATE_DONE) {
+                        console.log(jsonData);
+                        document.getElementById('waiting-to-start-game-modal').classList.remove('is-active');
+
+                        showPage('study');
+                        audioKey = jsonData.audioKey;
+                        audioEndpoint = jsonData.audioEndpoint;
+
+                        presentation = jsonData.presentation;
+                        showSlide(0);
+                        document.getElementById('slide-image').innerHTML = `<img src="${jsonData.base64Image}"/>`;
+                        
+                        state = States.STUDYING;
                     }
-                    setNextTrivia();
-                } else if (cmd === Commands.GENERATE_DONE) {
-                    console.log(jsonData);
-                    document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
-                    document.getElementById('study').classList.add('is-active');        
-                    document.getElementById('waiting-to-start-game-modal').classList.remove('is-active');
-
-                    showPage('study');
-
-                    presentation = jsonData.presentation;
-                    showSlide(0);
-                    document.getElementById('slide-image').innerHTML = `<img src="${jsonData.base64Image}"/>`;
-
-                    state = States.STUDYING;
-
-                    // TODO: start presentation...                    
+                } else {
+                    // We presume this is an MP3 file
+                    const url = URL.createObjectURL(event.data);
+                    const voicePlayer = document.getElementById('voice-player');
+                    voicePlayer.src = url;
+                    voicePlayer.play();
                 }
             };
 
@@ -555,6 +584,45 @@
 
 
             updatePlayerInputs();
+
+            function delayed() {
+
+                const testText = `[{"textContent":"# Unemployment \n### An Introduction by Professor Noodle","narration":"Hello, everyone! I'm Professor Noodle, and today we're going to explore the fascinating concept of Unemployment within the field of Labor Economics. Let's dive in! Over the next few slides, we'll unravel the intricacies of this concept, examine its relevance, and discover its practical applications. By the end of this presentation, you'll have a solid understanding of Unemployment and its significance."},{"textContent":"## What is Unemployment?\nUnemployment refers to the state of being jobless or without paid work. It describes a situation where individuals who are able and willing to work are unable to find suitable employment. Unemployment is a crucial indicator of the overall health and performance of an economy.","narration":"To start, let's understand what Unemployment is. Unemployment refers to the state of being jobless or without paid work. It describes a situation where individuals who are able and willing to work are unable to find suitable employment. Unemployment is a crucial indicator of the overall health and performance of an economy. For instance, high levels of unemployment can signal an economic downturn or recession, while low unemployment typically indicates a thriving job market."},{"textContent":"## Key Aspects of Unemployment\n- Causes of Unemployment: Economic factors, such as recessions, changes in technology, and shifts in consumer demand, can lead to job losses and unemployment.\n- Types of Unemployment: There are different types of unemployment, including frictional, structural, and cyclical, each with its own underlying causes and implications.\n- Measuring Unemployment: Governments use various metrics, such as the unemployment rate, to quantify and track the level of unemployment in an economy.","narration":"Now, let's look at some key aspects of Unemployment. First, the causes of Unemployment can include economic factors, such as recessions, changes in technology, and shifts in consumer demand, which can lead to job losses and unemployment. \n\nNext, there are different types of unemployment, including frictional, structural, and cyclical, each with its own underlying causes and implications. Frictional unemployment, for instance, occurs when workers are transitioning between jobs, while structural unemployment is caused by a mismatch between the skills of workers and the requirements of available jobs.\n\nLastly, governments use various metrics, such as the unemployment rate, to quantify and track the level of unemployment in an economy. This data is crucial for policymakers to understand the state of the job market and implement appropriate measures to address unemployment."},{"textContent":"## Impacts of Unemployment\n- Economic Impact: High unemployment can lead to reduced consumer spending, decreased tax revenue, and increased government spending on social welfare programs, which can slow economic growth.\n- Social Impact: Unemployment can have significant social consequences, such as increased poverty, mental health issues, and strained social relationships.\n- Policy Responses: Governments often implement policies, such as job training programs, unemployment benefits, and economic stimulus measures, to address and mitigate the effects of unemployment.","narration":"Now, let's explore the impacts of Unemployment. First, high unemployment can have a significant economic impact, leading to reduced consumer spending, decreased tax revenue, and increased government spending on social welfare programs, which can slow economic growth. \n\nUnemployment can also have substantial social impacts, such as increased poverty, mental health issues, and strained social relationships. Individuals who lose their jobs can face financial hardship, reduced self-esteem, and difficulties maintaining their standard of living and social connections.\n\nIn response to these challenges, governments often implement policies to address and mitigate the effects of unemployment. These policies can include job training programs, unemployment benefits, and economic stimulus measures aimed at creating new job opportunities and supporting those affected by joblessness."},{"textContent":"## Factors Influencing Unemployment\n- Demographic Factors: Characteristics like age, gender, and education level can influence an individual's likelihood of experiencing unemployment.\n- Macroeconomic Conditions: The overall state of the economy, including factors like GDP growth, inflation, and interest rates, can have a significant impact on unemployment levels.\n- Labor Market Dynamics: Factors such as labor force participation, job creation, and labor market regulations can affect the balance between supply and demand for workers.","narration":"Next, let's examine some of the key factors that influence Unemployment. Demographic factors, such as age, gender, and education level, can play a significant role in an individual's likelihood of experiencing unemployment. For example, younger workers and those with lower levels of education may face greater challenges in finding and securing employment.\n\nMoreover, the overall macroeconomic conditions, including GDP growth, inflation, and interest rates, can have a substantial impact on unemployment levels. During periods of economic expansion and prosperity, the job market tends to be more robust, with more opportunities available. Conversely, economic downturns and recessions often lead to higher unemployment.\n\nFinally, labor market dynamics, such as labor force participation, job creation, and labor market regulations, can affect the balance between the supply and demand for workers. Policies that promote job creation and support worker training and development can help alleviate unemployment in the long run."},{"textContent":"## Conclusion\n### Recap of Unemployment\n- Unemployment is a crucial indicator of the overall health and performance of an economy.\n- There are various causes and types of unemployment, each with its own implications.\n- Unemployment can have significant economic and social impacts, leading governments to implement various policy responses.\n- Factors such as demographics, macroeconomic conditions, and labor market dynamics can influence unemployment levels.","narration":"To wrap up, let's recap what we've learned about Unemployment. We've covered how Unemployment is a crucial indicator of the overall health and performance of an economy, with various causes and types, each with its own implications. We also explored how Unemployment can have significant economic and social impacts, leading governments to implement various policy responses to address these challenges.\n\nFinally, we examined how factors such as demographics, macroeconomic conditions, and labor market dynamics can influence unemployment levels. The nuances and details we've discussed are what truly bring the concept of Unemployment to life and underscore its importance in the field of Labor Economics. Thank you for your attention, and I hope you now have a deeper understanding of this fascinating topic."}]`.replace(/\n|\r/g, '\\n');
+
+                showPage('study');
+                presentation = {
+                    slides: JSON.parse(testText),
+                    questions: [
+                        {
+                        question: 'What is the basic definition of Unemployment?',
+                        answer: 'Unemployment refers to the state of being jobless or without paid work. It describes a situation where individuals who are able and willing to work are unable to find suitable employment.'
+                        },
+                        {
+                        question: 'Name one key aspect of Unemployment discussed in the presentation.',
+                        answer: 'One key aspect of Unemployment discussed in the presentation is the causes of Unemployment, which can include economic factors such as recessions, changes in technology, and shifts in consumer demand.'
+                        },
+                        {
+                        question: 'How does Unemployment impact the field of Labor Economics?',
+                        answer: 'Unemployment is a crucial indicator of the overall health and performance of an economy, which is the central focus of the field of Labor Economics. High unemployment can signal an economic downturn or recession, while low unemployment typically indicates a thriving job market, both of which are important for Labor Economists to understand and analyze.'
+                        },
+                        {
+                        question: 'Describe the relationship between the causes of Unemployment and the types of Unemployment discussed in the presentation.',
+                        answer: 'The causes of Unemployment, such as economic factors, can lead to different types of unemployment, including frictional, structural, and cyclical. For example, a recession (an economic factor) can lead to cyclical unemployment, while changes in technology (another economic factor) can result in structural unemployment due to a mismatch between worker skills and job requirements.'
+                        },
+                        {
+                        question: 'Summarize the main points covered in the conclusion of the presentation.',
+                        answer: 'The main points covered in the conclusion of the presentation are: 1) Unemployment is a crucial indicator of the overall health and performance of an economy, 2) There are various causes and types of unemployment, each with its own implications, 3) Unemployment can have significant economic and social impacts, leading governments to implement policy responses, and 4) Factors such as demographics, macroeconomic conditions, and labor market dynamics can influence unemployment levels.'
+                        }
+                    ]
+                };
+                
+                showSlide(0);
+
+                tts('Hello! This is a test.', Speakers.PROFESSOR);
+
+                state = States.STUDYING;
+            }
+            setTimeout(delayed, 1500);
         });
 
     </script>

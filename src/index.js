@@ -1,6 +1,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { Buffer } from 'node:buffer';
+import { w3cwebsocket } from 'websocket';
 
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -13,6 +14,8 @@ const Commands = {
 	GENERATE: 'generate',
 	GENERATE_STARTED: 'generate-started',
 	GENERATE_DONE: 'generate-done',
+	TTS: 'tts',
+	SAY: 'say'
 }
 
 const Difficulties = {
@@ -175,6 +178,10 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	clientIP;
 	transcript = '';
 	questions;
+	professorVoice = 'aura-athena-en';
+	playerVoices = [];
+	voiceWs = null;
+	lastVoice;
 
 	async fetch(request) {
 		this.clientIP = request.headers.get('cf-connecting-ip');
@@ -322,11 +329,11 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		console.log('Class of presentation:', typeof presentation);
 		if (typeof presentation.slides === 'string') {
 			console.log('Was string!')
-			presentation.slides = JSON.stringify(presentation.slides);
+			presentation.slides = JSON.parse(presentation.slides);
 			console.log('Presentation:', presentation);
 		}
 		if (typeof presentation.questions === 'string') {
-			presentation.questions = JSON.stringify(presentation.questions);
+			presentation.questions = JSON.parse(presentation.questions);
 		}
 
 		this.transcript = '';
@@ -390,24 +397,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 
 		const base64Image = 'data:image/png;base64,' + uint8ToBase64(combinedChunks);
 
-
-		/*
-		prompt = Prompts.SUMMARIZE_PRESENTATION
-			.replace(/{{CONCEPT}}/g, this.concept)
-			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
-		response = await this.anthropic.messages.create({
-			model: this.env.ANTHROPIC_MODEL,
-			max_tokens: 2048,
-			messages: [{
-				role: 'user',
-				content: prompt
-			}]
-		});
-		this.summaryNotes = response.content[0].text;
-		console.log(this.summaryNotes);
-		*/
-
-		// TBD: delete from presentation the image and summary
 		response = await fetch(`https://api.deepgram.com/v1/projects/${this.env.DEEPGRAM_PROJECT_ID}/keys`, {
 			method: 'POST',
 			headers: {
@@ -439,6 +428,73 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		});
 	}
 
+	async speak(text, speaker) {
+		let newVoice;
+		if (speaker === 'professor') {
+			newVoice = this.professorVoice;
+		} else if (speaker === 'player 1') {
+			newVoice = this.playerVoices[0];
+		} else if (speaker === 'player 2') {
+			newVoice = this.playerVoices[1];
+		} else if (speaker === 'player 3') {
+			newVoice = this.playerVoices[2];
+		} else if (speaker === 'player 4') {
+			newVoice = this.playerVoices[3];
+		}
+		if (newVoice !== this.lastVoice) {
+			if (this.voiceWs !== null) {
+				this.voiceWs.close();
+			}
+			this.lastVoice = newVoice;
+			try {
+				this.voiceWs = new w3cwebsocket(this.env.DEEPGRAM_WS_ENDPOINT + `?model=${newVoice}&encoding=mp3`,["token", this.env.DEEPGRAM_API_KEY]);
+				
+				console.log(this.voiceWs);
+
+				const target = this;
+
+				this.voiceWs.onopen = function (event) {
+					console.log("Opening...");
+					
+				};
+				this.voiceWs.onmessage = function (event) {
+					console.log("Message...");
+					if (typeof event.data !== 'string') {
+						console.log("Maybe MP3...");
+						target.ws.send(event.data);						
+					} else {
+						const jsonData = JSON.parse(event.data);
+						if (jsonData.type === 'Metadata') {
+							target.voiceWs.send(JSON.stringify({
+								type: 'Speak',
+								text: text,
+							}));
+							target.voiceWs.send(JSON.stringify({
+								type: 'Flush'
+							}));
+						}
+					}
+				};
+				this.voiceWs.onerror = function (event) {
+					console.log(event);
+				};
+				this.voiceWs.onclose = function (event) {
+					console.log(event);
+				}
+			} catch (err) {
+				console.error(err);
+			}
+		} else {
+			this.voiceWs.send(JSON.stringify({
+				type: 'Speak',
+				text: text,
+			}));
+			this.voiceWs.send(JSON.stringify({
+				type: 'Flush'
+			}));
+		}
+	}
+
 
 	async webSocketMessage(ws, message) {
 		console.log("Message", message);
@@ -449,8 +505,13 @@ export class NoodleKnockerDurableObject extends DurableObject {
 				this.difficulty = jsonData.difficulty;
 				this.playerCount = jsonData.playerCount;
 				await this.handleGenerateConcept();
+			} else if (jsonData.cmd === Commands.TTS) {
+				this.speak(jsonData.text, jsonData.speaker);
 			} else if (data.event === "close") {
-				console.log("Close", data);
+				if (this.voiceWs !== null) {
+					this.voiceWs.close();
+					this.voiceWs = null;
+				}
 				ws.close();
 			}
 		} catch (err) {
@@ -459,6 +520,10 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	}
 
 	async webSocketClose(ws, code, reason, wasClean) {
+		if (this.voiceWs !== null) {
+			this.voiceWs.close();
+			this.voiceWs = null;
+		}
 		ws.close(1000, "Closing WebSocket");
 	}
 
