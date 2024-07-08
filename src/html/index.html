@@ -1,12 +1,13 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Noodle Knocker - The Learn to Party Game!</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.1/css/bulma.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         .page {
             display: none;
@@ -21,6 +22,53 @@
             max-width: 200px;
             margin: 0 auto;
         }
+
+
+        #progress-indicator {
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3273dc;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #slide-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0; /* Place it behind other elements */
+        }
+        
+        #slide-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.2;
+        }
+        
+        /* Add styles for the card to ensure it's above the background */
+        #study .card {
+            position: relative;
+            z-index: 1; /* Place it above the background image */
+            background-color: rgba(255, 255, 255, 0.925); /* Add a semi-transparent background */
+        }
+        
+        /* Ensure the content is above the background */
+        #study .card-content,
+        #study .box,
+        #study .buttons {
+            position: relative;
+            z-index: 2;
+        }
+        
     </style>
 </head>
 <body>
@@ -75,7 +123,7 @@
                         </div>
                         <div class="field">
                             <div class="control">
-                                <button class="button is-primary is-fullwidth" onclick="showPage('study')">Start Game</button>
+                                <button class="button is-link is-fullwidth" onclick="startGame()">Start Game</button>
                             </div>
                         </div>
                     </div>
@@ -84,16 +132,33 @@
 
             <!-- Study Page -->
             <div id="study" class="page">
-                <h1 class="title is-1 has-text-centered">Study</h1>
+                <h1 class="title is-3 has-text-centered concept-label">Concept Here</h1>
                 <div class="columns is-centered">
                     <div class="column is-two-thirds">
-                        <figure class="image is-16by9">
-                            <img src="/api/placeholder/800/450" alt="Study material">
-                        </figure>
-                        <p class="has-text-centered mt-4">Caption area for study material</p>
-                        <div class="buttons is-centered mt-4">
-                            <button class="button is-warning" onclick="showPage('config')">Restart</button>
-                            <button class="button is-primary" onclick="showPage('ready')">Continue</button>
+                        <div class="card"  data-theme="light">
+                            <figure class="image" id="slide-image">
+                            </figure>
+                            <div class="card-content">
+                                <div class="content has-text-black" id="slide">
+                                    <h2>Yep</h2>
+                                    <p>Hello</p>
+                                    <ul>
+                                        <li>One</li>
+                                        <li>Two</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="box is-fullwidth has-background-warning-light">
+                                <div class="has-text-centered has-text-weight-bold has-text-link-dark">
+                                    <p>Caption area for study material</p>                                            
+                                </div>
+
+                            </div>
+                            <div class="buttons is-centered pb-4">
+                                <button class="button" onclick="prevSlide()" id="previous-slide-button">Previous Slide</button> 
+                                <button class="button is-info" onclick="nextSlide()" id="next-slide-button">Next Slide</button>
+                            </div>
+                            
                         </div>
                     </div>
                 </div>
@@ -232,12 +297,15 @@
 
     <div id="waiting-to-start-game-modal" class="modal">
         <div class="modal-background"></div>
-        <div class="modal-content">
-            <div class="box">
-                <h1>Generating...</h1>
-                <b>Concept: </b><span class="concept-label"></span>
-                <div class="concept-trivia"></div>
-            </div>
+        <div class="modal-card">
+            <header class="modal-card-head  is-centered">
+              <p class="modal-card-title is-3 has-text-warning concept-label has-text-centered is-centered" id="concept-generating-label">Please wait...</p>
+            </header>
+            <section class="modal-card-body has-text-centered">
+                <div class="box" id="concept-trivia" data-theme="light"></div>
+                <div id="progress-indicator"></div>
+                <p class="has-text-centered is-size-6">Please wait. The game will begin shortly.</p>
+            </section>
         </div>
     </div>
 
@@ -263,6 +331,9 @@
         let playerCount = 1;
         let difficulty = 'normal';
         let concept = 'none';
+        let presentation = null;
+        let currentSlideIndex = 0;
+        let currentSlide;
 
         const Commands = {
             GENERATE: 'generate',
@@ -351,18 +422,18 @@
             state = States.PLAYER_SETUP;
         }
 
-
         async function gotoStudyPage() {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('study').classList.add('is-active');
+        }
 
+
+        async function startGame() {
             updatePlayerInputs();
             difficulty = document.getElementById('difficulty').value;
-
+            document.getElementById('concept-trivia').innerText = 'Generating...';
             document.getElementById('waiting-to-start-game-modal').classList.add('is-active');
-
             state = States.WAITING_FOR_GENERATION;
-
             sendCmd(Commands.GENERATE, {
                 'playerCount': playerCount,
                 'difficulty': difficulty
@@ -393,6 +464,41 @@
 
         }
 
+        function showSlide(slideIndex) {
+            currentSlideIndex = slideIndex;
+            currentSlide = presentation.slides[currentSlideIndex];
+            const converter = new showdown.Converter();
+            const slideHtml = converter.makeHtml(currentSlide.textContent);
+            const slideElement = document.getElementById('slide');
+            slideElement.innerHTML = `<div>${slideHtml}</div>`;
+            let nextSlideButton = document.getElementById('next-slide-button');
+            if (currentSlideIndex === presentation.slides.length - 1) {
+                nextSlideButton.innerText = 'Ready';
+                nextSlideButton.classList.remove('is-info');
+                nextSlideButton.classList.add('is-link');
+            } else {
+                nextSlideButton.innerText = 'Next Slide';
+                nextSlideButton.classList.remove('is-link');
+                nextSlideButton.classList.add('is-info');
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                showSlide(currentSlideIndex);
+            }
+        }
+
+        function nextSlide() {
+            if (currentSlideIndex < presentation.slides.length - 1) {
+                currentSlideIndex++;
+                showSlide(currentSlideIndex);
+            } else {
+                showPage('ready');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             if (window.location.protocol === 'https:') {
                 ws = new WebSocket('wss://' + window.location.host + '/ws');
@@ -407,9 +513,9 @@
             
             ws.onmessage = function (event) {
                 const jsonData = JSON.parse(event.data);
-                console.log(jsonData);
                 const cmd = jsonData['cmd'];
                 if (cmd === Commands.GENERATE_STARTED) {
+                    console.log(jsonData);
                     concept = jsonData['concept'];
                     document.querySelectorAll('.concept-label').forEach(element => {
                         element.innerText = concept;
@@ -419,16 +525,23 @@
                     function setNextTrivia() {
                         if (state === States.WAITING_FOR_GENERATION) {
                             triviaIndex = (triviaIndex + 1) % triviaItems.length;
-                            document.querySelectorAll('.concept-trivia').forEach(element => {
-                                element.innerText = triviaItems[triviaIndex];
-                            });
-                            setTimeout(setNextTrivia, 5000);
+                            document.getElementById('concept-trivia').innerText = triviaItems[triviaIndex];
+                            setTimeout(setNextTrivia, 8000);
                         }
                     }
                     setNextTrivia();
-                } else if (cmd === commands.GENERATE_DONE) {
+                } else if (cmd === Commands.GENERATE_DONE) {
                     console.log(jsonData);
+                    document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
+                    document.getElementById('study').classList.add('is-active');        
                     document.getElementById('waiting-to-start-game-modal').classList.remove('is-active');
+
+                    showPage('study');
+
+                    presentation = jsonData.presentation;
+                    showSlide(0);
+                    document.getElementById('slide-image').innerHTML = `<img src="${jsonData.base64Image}"/>`;
+
                     state = States.STUDYING;
 
                     // TODO: start presentation...                    

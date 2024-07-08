@@ -1,5 +1,6 @@
 
 import { DurableObject } from "cloudflare:workers";
+import { Buffer } from 'node:buffer';
 
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -21,7 +22,7 @@ const Difficulties = {
 }
 
 const Prompts = {
-	CREATE_TRIVIA: `Please create 2 to 5 short trivia sentences related to the concept of "{{CONCEPT}}" within the field of study, {{FIELD_OF_STUDY}}. The trivia sentences should be factual and humorous, bizarre, or otherwise interesting.`,
+	CREATE_TRIVIA: `Please create 2 to 5 short trivia sentences related to the concept of "{{CONCEPT}}" within the field of study, {{FIELD_OF_STUDY}}. The trivia sentences should be humorous, bizarre, or otherwise interesting.`,
 
 	GENERATE_PRESENTATION: `Please create an interesting, factual, and engaging presentation on the concept of "{{CONCEPT}}" within the field of {{FIELD_OF_STUDY}}. The presentation should include 6 slides, starting with a title slide and ending with a conclusion slide. Each slide should contain concise, markdown-formatted textual content to be displayed to the audience, along with the exact narration that should accompany each slide. 
 
@@ -107,7 +108,7 @@ Additionally, the presentation should include 5 test questions of increasing dif
 
 5. **Challenging Question:**
    - **Question:** "Summarize the main points covered in the conclusion of the presentation."
-`,
+`
 }
 
 const Schema = {
@@ -128,7 +129,7 @@ const Schema = {
 	},
 	GENERATE_PRESENTATION: {
 		type: 'object',
-		description: 'A 6 slide presentation on the concept and its key aspects, with 5 test questions',
+		description: 'A 6 slide presentation on the concept with 5 related test questions',
 		properties: {
 			slides: {
 				type: 'array',
@@ -171,8 +172,16 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	ws;
 	concept;
 	fieldOfStudy;
+	clientIP;
+	transcript = '';
+	questions;
 
 	async fetch(request) {
+		this.clientIP = request.headers.get('cf-connecting-ip');
+		if (!this.clientIP) {
+			this.clientIP = 'localhost';
+		}
+		console.log(this.clientIP);
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
 		this.ctx.acceptWebSocket(server);
@@ -189,25 +198,72 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	}
 
 	sendCmd(cmd, data) {
-		console.log(cmd, data);
 		this.ws.send(JSON.stringify({
 			'cmd': cmd,
 			...data
 		}))
 	}
 
+	escapeControlCharacters(str) {
+		return str.replace(/[\n\r\t\b\f\\"]/g, match => {
+			const escapeChars = {
+				'\n': '\\n',
+				'\r': '\\r',
+				'\t': '\\t',
+				'\b': '\\b',
+				'\f': '\\f',
+				'\\': '\\\\',
+				'"': '\\"'
+			};
+			return escapeChars[match];
+		});
+	}
+	
+	deepEscapeJSON(input) {
+		if (typeof input !== 'string') {
+			throw new Error('Input must be a JSON string');
+		}
+	
+		return input.replace(/"(?:[^\\"]|\\.)*"/g, match => {
+			// Parse the JSON string
+			let parsed;
+			try {
+				parsed = JSON.parse(match);
+			} catch (e) {
+				// If parsing fails, it's likely already escaped, so return as is
+				return match;
+			}
+	
+			// If it's a string, escape its content
+			if (typeof parsed === 'string') {
+				return JSON.stringify(this.escapeControlCharacters(parsed));
+			}
+	
+			// If it's not a string, return the original match
+			return match;
+		});
+	}
+
 	convertToolInput(response) {
-		if (response.stop_reason == 'tool_use') {
+		console.log(response.content[0].input);
+		if (response.stop_reason === 'tool_use') {
 			for (let i = 0; i < response.content.length; i++) {
-				if (response.content[i].type == 'tool_use') {
-					return response.content[i].input;
-				} 
+				if (response.content[i].type === 'tool_use') {
+					const input = response.content[i].input;
+					if (typeof input === 'string') {
+						return this.deepEscapeJSON(input);
+					} else {
+						return input;
+					}
+				}
 			}
 		}
 		throw new Error('Failed to convert tool input');
 	}
 
+
 	async handleGenerateConcept() {
+		// todo: Handle 529 (overloaded) from Anthropic
 		const conceptFieldIndex = Math.floor(Math.random() * conceptFieldPairs.length);
 		this.fieldOfStudy = conceptFieldPairs[conceptFieldIndex][0];
 		this.concept = conceptFieldPairs[conceptFieldIndex][1];
@@ -216,7 +272,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 			.replace(/{{CONCEPT}}/g, this.concept)
 			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy);
 		let response = await this.anthropic.messages.create({
-			model: 'claude-3-5-sonnet-20240620',
+			model: this.env.ANTHROPIC_MODEL,
 			max_tokens: 1024,
 			messages: [{
 				role: 'user',
@@ -224,7 +280,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 			}],
 			tools: [{
 				name: 'create_trivia',
-				description: 'Create 2 to 5 short trivia sentences related to the concept, ' + this.concept,
+				description: 'Create 2 to 5 short humorous trivia sentences related to the concept, ' + this.concept,
 				input_schema: Schema.CREATE_TRIVIA
 			}],
 			tool_choice: { type: 'tool', name: 'create_trivia' },
@@ -247,7 +303,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
 			.replace(/{{DIFFICULTY_SNIPPET}}/g, difficultSnippet);
 		response = await this.anthropic.messages.create({
-			model: 'claude-3-5-sonnet-20240620',
+			model: this.env.ANTHROPIC_MODEL,
 			max_tokens: 4096,
 			system: 'You are Professor Noodle, an excellent communicator and presenter who is an expert on ' + this.concept + ' in the field of ' + this.fieldOfStudy + '.',
 			messages: [{
@@ -256,13 +312,131 @@ export class NoodleKnockerDurableObject extends DurableObject {
 			}],
 			tools: [{
 				name: 'generate_presentation',
-				description: 'Create a 6-slide presentation accompanied by 5 test questions on the concept, ' + this.concept,
+				description: 'Create a 6-slide presentation with 5 test questions on the concept, ' + this.concept,
 				input_schema: Schema.GENERATE_PRESENTATION
 			}],
 			tool_choice: { type: 'tool', name: 'generate_presentation' },
 		});
+		let presentation = this.convertToolInput(response);
+		// print what presentation is instanceof
+		console.log('Class of presentation:', typeof presentation);
+		if (typeof presentation.slides === 'string') {
+			console.log('Was string!')
+			presentation.slides = JSON.stringify(presentation.slides);
+			console.log('Presentation:', presentation);
+		}
+		if (typeof presentation.questions === 'string') {
+			presentation.questions = JSON.stringify(presentation.questions);
+		}
+
+		this.transcript = '';
+		presentation.slides.forEach(slide => {
+			this.transcript += slide.narration + '\n';
+		});
+
+		console.log(JSON.stringify(presentation.slides));
+
+		const artStyle = [
+			"Cartoon",
+			"Comic Book",
+			"Street Art",
+			"Pop Art",
+			"Graffiti",
+			"Digital Art",
+			"Pixel Art",
+			"Vaporwave",
+			"Fantasy Art",
+			"Chibi",
+			"Manga",
+			"Cyberpunk"
+		][Math.floor(Math.random() * 12)];
+
+		prompt = `{{this.concept}}, {{this.fieldOfStudy}}`;
+		;
+
+		response = await this.env.AI.run(
+			"@cf/bytedance/stable-diffusion-xl-lightning",
+			{
+				prompt: prompt
+			}
+		);
+
+		let reader = await response.getReader();
+		const chunks = [];
+		let done, value;
+		while (!done) {
+			({ done, value } = await reader.read());
+			if (value) {
+				chunks.push(value);
+			}
+		}
+
+		function uint8ToBase64(uint8Array) {
+			const CHUNK_SIZE = 0x8000; // arbitrary number to prevent stack overflow
+			let base64 = '';
+			for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
+				const chunk = uint8Array.subarray(i, i + CHUNK_SIZE);
+				base64 += String.fromCharCode.apply(null, chunk);
+			}
+			return btoa(base64);
+		}
+
+		const combinedChunks = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
+		let offset = 0;
+		for (const chunk of chunks) {
+			combinedChunks.set(chunk, offset);
+			offset += chunk.length;
+		}
+
+		const base64Image = 'data:image/png;base64,' + uint8ToBase64(combinedChunks);
+
+
+		/*
+		prompt = Prompts.SUMMARIZE_PRESENTATION
+			.replace(/{{CONCEPT}}/g, this.concept)
+			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
+		response = await this.anthropic.messages.create({
+			model: this.env.ANTHROPIC_MODEL,
+			max_tokens: 2048,
+			messages: [{
+				role: 'user',
+				content: prompt
+			}]
+		});
+		this.summaryNotes = response.content[0].text;
+		console.log(this.summaryNotes);
+		*/
+
+		// TBD: delete from presentation the image and summary
+		response = await fetch(`https://api.deepgram.com/v1/projects/${this.env.DEEPGRAM_PROJECT_ID}/keys`, {
+			method: 'POST',
+			headers: {
+				'Authorization': 'Token ' + this.env.DEEPGRAM_API_KEY,
+				'Content-Type': 'application/json',
+				'Accept': 'application/json'
+			},
+			body: JSON.stringify({
+				comment: 'Temporary key for Noodle Knocker from ' + this.clientIP,
+				scopes: [
+					'usage:write'
+				],
+				time_to_live_in_seconds: 3600
+			})
+		}
+		);
 		console.log(response);
-		this.sendCmd(Commands.GENERATE_DONE, this.convertToolInput(response));
+
+		const audioKey = (await response.json()).key;
+		console.log(audioKey);
+		this.sendCmd(Commands.GENERATE_DONE, {
+			presentation: presentation,
+			audioKey: audioKey,
+			audioEndpoint: this.env.DEEPGRAM_WS_ENDPOINT,
+			gameInfo: {
+				// next
+			},
+			base64Image: base64Image
+		});
 	}
 
 
@@ -301,19 +475,19 @@ export default {
 				const upgradeHeader = request.headers.get('Upgrade');
 				if (!upgradeHeader || upgradeHeader !== 'websocket') {
 					return new Response('Expected Upgrade: websocket', { status: 426 });
-				}	
+				}
 				const id = env.NOODLE_KNOCKER_DURABLE_OBJECT.newUniqueId();
 				const stub = env.NOODLE_KNOCKER_DURABLE_OBJECT.get(id);
 				return stub.fetch(request);
 			} else {
-				return new Response("Not found.", { 
+				return new Response("Not found.", {
 					status: 404,
 					headers: { 'content-type': 'text/plain' }
-				});				
+				});
 			}
 		} catch (e) {
 			console.error(e);
-			return new Response(e, { 
+			return new Response(e, {
 				status: 500,
 				headers: { 'content-type': 'text/plain' }
 			});
