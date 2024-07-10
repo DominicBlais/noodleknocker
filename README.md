@@ -7,7 +7,7 @@
 
 ## Why This Matters
 
-The rapid advancement of generative AI is shifting the educational value of students' own work versus directing and managing work by AI. Improving students' ability to guide AI to produce better results on their behalf is already a key skill for many students. In some cases, students are demonstrating this shift by using AI to illicitly complete their school work, creating a conflict between learning goals and the development of these next generation managerial skills.
+The rapid advancement of generative AI is shifting the educational value from students' own labor to their directing and managing work by AI. Improving students' ability to guide AI to produce better results on their behalf is already a key skill for many students. In some cases, students are demonstrating this shift by using AI to illicitly complete their schoolwork, creating a conflict between learning goals and the development of these next generation managerial skills.
 
 **Noodle Knocker** attempts to align learning goals with the development and practice of managerial AI skills. Additionally, **Noodle Knocker** presents what could be a very effective way for students to learn material through its learning-by-teaching approach and multimodal instruction format.
 
@@ -20,17 +20,17 @@ Finally, **Noodle Knocker** is also a demonstration of the potential of AI-to-AI
 
 **Noodle Knocker** makes extensive use of voice interaction through [Deepgram](https://deepgram.com)'s text-to-speech and speech-to-text services. Deepgram provides superb performance, allowing for very natural conversational flow and, thereby, a more emotionally and intellectually convincing interaction with the app's AI personalities.
 
-Internally, **Noodle Knocker** is written with JavaScript, has a number of "hacks" due to Cloudflare Worker's constraints, and makes extensive use of web sockets and Cloudflare's Durable Objects persistent worker system.
+Internally, **Noodle Knocker** is written in JavaScript, has a number of "hacks" due to Cloudflare Worker's constraints, and makes extensive use of WebSockets and Cloudflare's Durable Objects persistent worker system.
 
 ## What It Looks Like
 
-To start, set the number of players and their names.
+To start, set the number of players and their names:
 ![Screen 1](docs_media/nk-screen-1.png)
 
-Once the topic has been randomly chosen, the players get a short presentation by Professor Noodle about it.
+Once the topic has been randomly chosen, the players get a short presentation by Professor Noodle:
 ![Screen 2](docs_media/nk-screen-2.png)
 
-After the presentation, players can ask Professor Noodle any questions.
+After the presentation, players can ask Professor Noodle any questions:
 ![Screen 3](docs_media/nk-screen-3.png)
 
 Next comes the key activity: players teach their AI partners (each imbued with unique characteristics) about the topic:
@@ -70,7 +70,7 @@ new_classes = ["NoodleKnockerDurableObject"]
 binding = "AI"
 ```
 
-Please be aware that **Noodle Knocker** is not fully compatible with Safari browsers. Safari's strict permissions require user-initiated audio playback, which interferes with **Noodle Knocker**'s web socket-driven intermittent audio playback.
+Please be aware that **Noodle Knocker** is not fully compatible with Safari browsers. Safari's strict permissions require user-initiated audio playback, which interferes with **Noodle Knocker**'s WebSocket-driven intermittent audio playback.
 
 
 ## Credits
