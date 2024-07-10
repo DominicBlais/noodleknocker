@@ -174,4 +174,4 @@ dist
 wrangler.toml
 
 *.key
-*.cert
+*.crt

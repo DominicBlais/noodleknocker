@@ -591,7 +591,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		} else if (playerIndex === 3) {
 			speaker = Speakers.PLAYER4;
 		}
-		try {
 		let answerBuffer = '';
 		const rawConversation = this.playerData[playerIndex].conversation;
 		let prompt;
@@ -653,13 +652,9 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		}).on('error', (e) => {
 			console.error(e);
 		});
-		} catch (e) {
-			console.error(e);
-		}
 	}
 
 	async handleProfessorGrades(playerIndex, questionIndex) {
-		try {
 		let answerBuffer = '';
 		let difficultySnippet = 'The grade you give should be generous and lenient, as the user is a beginner in their studies. Be encouraging and positive in your reason for the grade.';
 		if (this.difficulty === Difficulties.EASY) {
@@ -752,9 +747,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		}).on('error', (e) => {
 			console.error(e);
 		});
-		} catch (e) {
-			console.error(e);
-		}
 	}
 
 	getVoice(speaker) {

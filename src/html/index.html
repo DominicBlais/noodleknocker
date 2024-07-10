@@ -62,7 +62,6 @@
             width: 100%;
             height: 100%;
             z-index: 0;
-            /* Place it behind other elements */
         }
 
         #slide-image img {
@@ -72,16 +71,13 @@
             opacity: 0.2;
         }
 
-        /* Add styles for the card to ensure it's above the background */
+
         #study .card {
             position: relative;
             z-index: 1;
-            /* Place it above the background image */
             background-color: rgba(255, 255, 255, 0.925);
-            /* Add a semi-transparent background */
         }
 
-        /* Ensure the content is above the background */
         #study .card-content,
         #study .box,
         #study .buttons {
@@ -95,6 +91,10 @@
 
         .ml-auto {
             margin-left: auto;
+        }
+
+        #slide {
+            font-size: 125%;
         }
 
         #slide strong {
@@ -190,7 +190,6 @@
                             </div>
                         </div>
                         <div id="player-names" class="mb-6">
-                            <!-- Player name inputs will be dynamically added here -->
                         </div>
                         <div class="field mb-6">
                             <label class="label">Difficulty</label>
@@ -248,8 +247,8 @@
                 </div>
 
                 <div class="columns is-centered">
-                    <div class="column is-two-thirds">
-                        <div class="card" data-theme="light">
+                    <div class="column is-three-quarters">
+                        <div class="card" data-theme="light" style="height: 50vh">
                             <figure class="image" id="slide-image">
                             </figure>
                             <div class="card-content">
@@ -972,6 +971,7 @@
         }
 
         async function gotoResultsPage() {
+            state = States.RESULTS;
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('results').classList.add('is-active');
             const defaults = {
@@ -1369,6 +1369,9 @@
             };
 
             ws.onclose = function (event) {
+                if (state == States.RESULTS) {
+                    return;
+                }
                 console.log('Websocket closed!');
                 alert('The connection was lost. Please reload the page.');
                 location.reload();
