@@ -9,6 +9,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
+
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
         .page {
             display: none;
         }
@@ -22,7 +29,6 @@
             max-width: 200px;
             margin: 0 auto;
         }
-
 
         #progress-indicator {
             margin: 20px auto;
@@ -68,32 +74,88 @@
             position: relative;
             z-index: 2;
         }
+
+        .navbar-brand {
+            width: 100%;
+        }
+        
+        .ml-auto {
+            margin-left: auto;
+        }
+
+        #slide strong {
+            color: black;
+            font-size: 150%;
+        }
+
+        .box strong {
+            color: black;
+        }
+
         
     </style>
 </head>
 <body>
-    <nav class="navbar is-primary" role="navigation" aria-label="main navigation">
-        <div class="navbar-brand">
-            <a class="navbar-item" href="#config">
-                <strong>Noodle Knocker - The Learn to Party Game!</strong>
-            </a>
+    <nav class="navbar has-background-primary-05 is-fixed-top" role="navigation" aria-label="main navigation">
+        <div class="navbar-brand is-fullwidth">
+            <div class="navbar-item is-size-5 has-text-weight-bold" id="current-page-title"><img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&radius=50&backgroundColor=327AFF" style="width:32px;height:32px" /></div>
+            <div class="navbar-item has-text-right ml-auto" id="current-page-info">
+                <div class="top-buttons is-hidden" id="config-top-buttons">
+                    <button class="button is-link is-fullwidth" onclick="startGame()">Start Game</button>
+                </div>
+                <div class="top-buttons is-hidden" id="study-top-buttons">
+                    <div class="buttons is-centered">
+                        <button class="button" onclick="prevSlide()" id="previous-slide-button">Previous Slide</button> 
+                        <button class="button is-info" onclick="nextSlide()" id="next-slide-button">Next Slide</button>
+                    </div>
+                </div>
+                <div class="top-buttons is-hidden" id="q_and_a-top-buttons">
+                    <div class="buttons is-centered">
+                        <button class="button is-warning" id="question-recording-button" onclick="toggleRecordingQuestion()">Ask Question</button>
+                        <button class="button is-link" onclick="showPage('teach')">Ready</button>
+                    </div>
+                </div>
+                <div class="top-buttons is-hidden" id="teach-top-buttons">
+                    <div class="buttons is-centered">
+                        <button class="button is-warning" id="teach-recording-button" onclick="toggleRecordingTeaching()">Start Talking</button>
+                        <button class="button is-info" onclick="prepareNextTeacher()" id="next-player-button">Next Player</button>
+                    </div>
+                </div>
+                <div class="top-buttons is-hidden" id="quiz-top-buttons">
+                    <div class="buttons is-centered">
+                        <button class="button is-info" onclick="quizButtonPressed()" id="quiz-next-button">Quizzing...</button>
+                    </div>
+                </div>
+                <div class="top-buttons is-hidden" id="results-top-buttons">
+                    <div class="buttons is-centered">
+                        <button class="button is-link" onclick="resetGame()">Ready</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </nav>
 
+    <audio id="silent-player" src="/silent.mp3" loop class="is-hidden"></audio>
     <audio id="voice-player" class="is-hidden"></audio>
 
-    <section class="section">
+    <section class="section mt-5">
         <div class="container">
             <!-- Config Page -->
-            <div id="config" class="page">
-                <h1 class="title is-1 has-text-centered">Game Configuration</h1>
+            <div id="config" class="page is-active">
+                <article class="message is-info">
+                    <div class="message-body">
+                        Welcome to <strong>Noodle Knocker</strong>! This fun party game for up to 4 players challenges you to learn something new and teach it to your AI partner. Your partner then answers Professor Noodle's questions, and the best teacher wins!
+                    </div>
+                </article>
+
+                <h1 class="title is-1 has-text-centered">Who's Playing?</h1>
                 <div class="columns is-centered">
                     <div class="column is-half">
                         <div class="field">
                             <label class="label">Number of Players</label>
                             <div class="control">
                                 <div class="select is-fullwidth">
-                                    <select id="playerCount" onchange="updatePlayerInputs()">
+                                    <select id="player-count" onchange="updatePlayerInputs()">
                                         <option value="1">1</option>
                                         <option value="2">2</option>
                                         <option value="3">3</option>
@@ -102,14 +164,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="playerNames" class="mb-6">
+                        <div id="player-names" class="mb-6">
                             <!-- Player name inputs will be dynamically added here -->
-                            <div class="field player-name-field">
-                                <label class="label">Player 1 Name</label>
-                                <div class="control">
-                                    <input class="input" type="text" placeholder="Enter player name" value="Player 1">
-                                </div>
-                            </div>
                         </div>
                         <div class="field mb-6">
                             <label class="label">Difficulty</label>
@@ -123,18 +179,45 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="field">
-                            <div class="control">
-                                <button class="button is-link is-fullwidth" onclick="startGame()">Start Game</button>
-                            </div>
-                        </div>
                     </div>
+
+
                 </div>
+
             </div>
 
             <!-- Study Page -->
-            <div id="study" class="page is-active">
+            <div id="study" class="page">
+                <article class="message is-info">
+                    <div class="message-body">
+                        Watch Professor's Noodle quick presentation. You'll need to teach your AI partner about this topic to win!
+                    </div>
+                </article>
+
                 <h1 class="title is-3 has-text-centered concept-label">Concept Here</h1>
+
+                <div class="columns is-centered">
+                    <div class="column is-2">
+                        <div class="avatar-professor avatar-talk">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-professor avatar-normal">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-professor avatar-blink">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="box is-fullwidth has-background-warning-light">
+                            <div class="has-text-weight-bold has-text-link-dark">
+                                <p id="slide-caption">Caption area for study material</p>                                            
+                            </div>
+        
+                        </div>
+                    </div>        
+                </div>
+
                 <div class="columns is-centered">
                     <div class="column is-two-thirds">
                         <div class="card"  data-theme="light">
@@ -149,73 +232,83 @@
                                         <li>Two</li>
                                     </ul>
                                 </div>
-                            </div>
-                            <div class="box is-fullwidth has-background-warning-light">
-                                <div class="has-text-centered has-text-weight-bold has-text-link-dark">
-                                    <p>Caption area for study material</p>                                            
-                                </div>
-
-                            </div>
-                            <div class="buttons is-centered pb-4">
-                                <button class="button" onclick="prevSlide()" id="previous-slide-button">Previous Slide</button> 
-                                <button class="button is-info" onclick="nextSlide()" id="next-slide-button">Next Slide</button>
-                            </div>
-                            
+                            </div>                            
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Ready Page -->
-            <div id="ready" class="page">
-                <h1 class="title is-1 has-text-centered">Get Ready</h1>
-                <div class="columns is-centered">
-                    <div class="column is-half">
-                        <figure class="image avatar-image">
-                            <img src="/api/placeholder/200/200" alt="Avatar">
-                        </figure>
-                        <p class="has-text-centered mt-4">Avatar caption</p>
-                        <div class="buttons is-centered mt-4" id="talkButtons">
-                            <!-- Talk buttons will be dynamically added here -->
-                        </div>
-                        <button class="button is-primary is-fullwidth mt-4" onclick="showPage('teach')">Continue</button>
+            <!-- Q and A Page -->
+            <div id="q_and_a" class="page">
+                <article class="message is-info">
+                    <div class="message-body">
+                        Do any players have questions for Professor Noodle? This is your last chance to learn about the topic before teaching your partner!
                     </div>
+                </article>
+
+                <h1 class="title is-1 has-text-centered">Any Questions?</h1>
+                <div class="columns is-centered">
+                    <div class="column is-2">
+                        <div class="avatar-professor avatar-talk">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-professor avatar-normal">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-professor avatar-blink">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="box is-fullwidth has-background-warning-light">
+                            <div class="has-text-weight-bold has-text-link-dark">
+                                <p id="questions-caption">Caption area for study material</p>                                            
+                            </div>
+        
+                        </div>
+                    </div>        
                 </div>
+
+                
             </div>
 
             <!-- Teach Page -->
             <div id="teach" class="page">
-                <h1 class="title is-1 has-text-centered">Teach</h1>
+                <article class="message is-info">
+                    <div class="message-body">
+                        Teach your partner! Share everything you remember about the topic to prepare them for Professor Noodle's questions.
+                    </div>
+                </article>
+
+
+                <h1 class="title is-1 has-text-centered" id="teach-title">Player 1's Turn</h1>
+
                 <div class="columns is-centered">
-                    <div class="column is-two-thirds">
-                        <div class="level">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <h2 class="subtitle">Player 1's Turn</h2>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <span id="timer" class="tag is-primary is-large">03:00</span>
-                                </div>
+                    <div class="column">
+                        <div class="box is-fullwidth has-background-warning-light" id="teach-caption-box">
+                            <div class="has-text-weight-bold has-text-link-dark">
+                                <p id="teach-caption"></p>                                            
                             </div>
                         </div>
-                        <div class="columns">
-                            <div class="column is-two-thirds">
-                                <figure class="image avatar-image">
-                                    <img src="/api/placeholder/200/200" alt="Avatar">
-                                </figure>
-                                <p class="has-text-centered mt-4">Avatar caption</p>
-                            </div>
-                            <div class="column">
-                                <div class="box">
-                                    <p>Avatar description goes here. This is a paragraph-length description of the avatar.</p>
-                                </div>
-                            </div>
+                    </div>        
+                    <div class="column is-2">
+                        <div id="teaching-avatar-talk" class="avatar-player1 avatar-talk">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&radius=50&backgroundColor=E0AC69" style="width:128px;height:128px" />
                         </div>
-                        <div class="buttons is-centered mt-4">
-                            <button class="button is-primary" id="talkButton">Talk</button>
-                            <button class="button is-primary" onclick="showPage('quiz')">Continue</button>
+                        <div id="teaching-avatar-normal" class="avatar-player1 avatar-normal">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&radius=50&backgroundColor=E0AC69" style="width:128px;height:128px" />
+                        </div>
+                        <div id="teaching-avatar-blink" class="avatar-player1 avatar-blink">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&radius=50&backgroundColor=E0AC69" style="width:128px;height:128px" />
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="columns is-centered">
+                    <div class="column">
+                        <div class="box">
+                            <strong>Who is your partner?</strong> <p id="partner-description">Avatar description goes here. This is a paragraph-length description of the avatar.</p>
                         </div>
                     </div>
                 </div>
@@ -223,28 +316,103 @@
 
             <!-- Quiz Page -->
             <div id="quiz" class="page">
-                <h1 class="title is-1 has-text-centered">Quiz</h1>
-                <h2 class="subtitle has-text-centered">Player 1's Turn</h2>
+                <article class="message is-info">
+                    <div class="message-body" id="quiz-help">
+                        It's quiz time! Let's see how well your partner has grasped the topic. Good luck!
+                    </div>
+                </article>
+
+                <h1 class="title is-1 has-text-centered" id="question-count">Question 1 of 5</h1>
+
                 <div class="columns is-centered">
-                    <div class="column is-half">
-                        <div class="columns">
-                            <div class="column">
-                                <figure class="image avatar-image">
-                                    <img src="/api/placeholder/150/150" alt="Avatar 1">
-                                </figure>
-                                <p class="has-text-centered mt-2">Avatar 1 caption</p>
-                            </div>
-                            <div class="column">
-                                <figure class="image avatar-image">
-                                    <img src="/api/placeholder/150/150" alt="Avatar 2">
-                                </figure>
-                                <p class="has-text-centered mt-2">Avatar 2 caption</p>
+                    <div class="column is-2">
+                        <div class="avatar-professor avatar-talk">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-professor avatar-normal">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-professor avatar-blink">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="box is-fullwidth has-background-warning-light">
+                            <div class="has-text-weight-bold has-text-link-dark">
+                                <p id="quiz-professor-caption">Quiz question</p>                                            
                             </div>
                         </div>
-                        <div class="has-text-centered mt-4">
-                            <h2 class="title is-2">Score: <span id="score">0</span></h2>
+                    </div>
+                </div>
+                <hr/>
+
+
+                <div class="columns is-centered">
+                    <div class="column">
+                        <div class="box is-fullwidth has-background-primary-00" id="quiz-answer-caption-box">
+                            <div class="has-text-weight-bold has-text-link-dark">
+                                <p id="quiz-answer-caption"></p>                                            
+                            </div>
                         </div>
-                        <button class="button is-primary is-fullwidth mt-4" onclick="showPage('results')">Continue</button>
+                    </div>    
+                </div>
+
+                <div class="columns is-centered is-mobile">
+                    <div class="column has-text-centered has-background-link" id="player-1-quiz-column">
+                        <div class="avatar-player1 avatar-talk" id="quizzing-avatar-player-1-talk">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-player1 avatar-normal" id="quizzing-avatar-player-1-normal">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-player1 avatar-blink" id="quizzing-avatar-player-1-blink">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <hr/>
+                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info" id="player-1-quiz-name">Player 1 (Dude)</p>
+                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-1-quiz-score">0</p>                    
+                    </div>
+                    <div class="column has-text-centered has-background-link-dark" id="player-2-quiz-column">
+                        <div class="avatar-player2 avatar-talk" id="quizzing-avatar-player-2-talk">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-player2 avatar-normal" id="quizzing-avatar-player-2-normal">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-player2 avatar-blink" id="quizzing-avatar-player-2-blink">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <hr/>
+                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info" id="player-2-quiz-name">Player 2 (Dude)</p>
+                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-2-quiz-score">0</p>                    
+                    </div>
+                    <div class="column has-text-centered" id="player-3-quiz-column">
+                        <div class="avatar-player3 avatar-talk" id="quizzing-avatar-player-3-talk">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-player3 avatar-normal" id="quizzing-avatar-player-3-normal">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-player3 avatar-blink" id="quizzing-avatar-player-3-blink">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <hr/>
+                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info" id="player-3-quiz-name">Player 3 (Dude)</p>
+                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-3-quiz-score">0</p>                    
+                    </div>
+                    <div class="column has-text-centered" id="player-4-quiz-column">
+                        <div class="avatar-player4 avatar-talk" id="quizzing-avatar-player-4-talk">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-player4 avatar-normal" id="quizzing-avatar-player-4-normal">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <div class="avatar-player4 avatar-blink" id="quizzing-avatar-player-4-blink">
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                        </div>
+                        <hr/>
+                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info" id="player-4-quiz-name">Player 4 (Dude)</p>
+                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-4-quiz-score">0</p>                    
                     </div>
                 </div>
             </div>
@@ -270,82 +438,55 @@
                 </div>
             </div>
 
-            <!-- Help Page -->
-            <div id="help" class="page">
-                <h1 class="title is-1 has-text-centered">Help</h1>
-                <div class="columns is-centered">
-                    <div class="column is-two-thirds">
-                        <div class="content">
-                            <h2>Game Rules</h2>
-                            <p>Explain the rules of the game here...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- About Page -->
-            <div id="about" class="page">
-                <h1 class="title is-1 has-text-centered">About</h1>
-                <div class="columns is-centered">
-                    <div class="column is-two-thirds">
-                        <div class="content">
-                            <p>Ed2.AI Party Game is an exciting online multiplayer game designed to challenge your knowledge and communication skills. Compete with friends, learn new facts, and have fun in this unique educational experience!</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </section>
 
     <div id="waiting-to-start-game-modal" class="modal">
         <div class="modal-background"></div>
         <div class="modal-card">
-            <header class="modal-card-head  is-centered">
-              <p class="modal-card-title is-3 has-text-warning concept-label has-text-centered is-centered" id="concept-generating-label">Please wait...</p>
+            <header class="modal-card-head is-centered">
+              <p class="modal-card-title is-3 has-text-warning concept-label has-text-centered is-centered" id="concept-generating-label">Choosing Topic...</p>
             </header>
             <section class="modal-card-body has-text-centered">
                 <div class="box" id="concept-trivia" data-theme="light"></div>
                 <div id="progress-indicator"></div>
-                <p class="has-text-centered is-size-6">Please wait. The game will begin shortly.</p>
+                <p class="has-text-centered is-size-6">Please wait. Your game is being generated...</p>
             </section>
         </div>
     </div>
 
-    <footer class="footer">
-        <div class="content has-text-centered">
-            <p>
-                <a onclick="showHelp()">Help</a> | <a onclick="showAbout()">About</a>
-            </p>
-            <p>Copyright 2024 by Ed2.AI LLC</p>
+    <footer class="footer mt-auto">
+        <div class="content has-text-centered is-size-7">
+            <p>Copyright &copy; 2024 by Dominic Sellers-Blais. Licensed under the <a href="https://opensource.org/license/MIT" target="_blank">MIT License</a>. <a href="#" class="has-text-warning" target="_blank">GitHub</a></p>
         </div>
     </footer>
 
     <script>
-
-
-        const playerNames = {
-            player1Name: 'Player 1',
-            player2Name: 'Player 2',
-            player3Name: 'Player 3',
-            player4Name: 'Player 4'
-        };
-        
-        let playerCount = 1;
-        let difficulty = 'normal';
-        let concept = 'none';
-        let presentation = null;
-        let currentSlideIndex = 0;
-        let currentSlide;
-        let audioKey;
-        let audioEndpoint;
-        let professorVoice;
-
         const Commands = {
             GENERATE: 'generate',
             GENERATE_STARTED: 'generate-started',
             GENERATE_DONE: 'generate-done',
             TTS: 'tts',
-            SAY: 'say'
+            SAY: 'say',
+            STOP_GENERATING_SPEECH: 'stop-generating-speech',
+            DONE_SPEAKING: 'done-speaking',
+            START_TRANSCRIBING: 'start-transcribing',
+            STOP_TRANSCRIBING: 'stop-transcribing',
+            TRANSCRIBED: 'transcribed',
+            TRANSCRIBE_DONE: 'transcribe-done',
+            ASK_QUESTION: 'ask-question',
+            ASK_QUESTION_ANSWER_PART: 'ask-question-answer-part',
+            ASK_QUESTION_FINISHED: 'ask-question-finished',
+            TEACH_CONTESTANT: 'teach-contestant',
+            TEACH_CONTESTANT_ANSWER_PART: 'teach-contestant-answer-part',
+            TEACH_CONTESTANT_FINISHED: 'teach-contestant-finished',
+            CONTESTANT_QUIZ: 'contestant-quiz',
+            CONTESTANT_QUIZ_ANSWER_PART: 'contestant-quiz-answer-part',
+            CONTESTANT_QUIZ_FINISHED: 'contestant-quiz-finished',
+            PROFESSOR_QUIZ: 'professor-quiz',
+            PROFESSOR_QUIZ_ANSWER_PART: 'professor-quiz-answer-part',
+            PROFESSOR_QUIZ_FINISHED: 'professor-quiz-finished',
         }
 
         const Difficulties = {
@@ -357,24 +498,68 @@
         const States = {
             PLAYER_SETUP: 'player-setup',
             WAITING_FOR_GENERATION: 'waiting-for-generation',
-            STUDYING: 'studying'
+            STUDYING: 'studying',
+            Q_AND_A: 'q-and-a',
+            TEACHING: 'teaching',
+            QUIZZING: 'quizzing',
+            RESULTS: 'results',
         }
 
         const Speakers = {
+            NOBODY: 'nobody',
             PROFESSOR: 'professor',
-            PLAYER1: 'player 1',
-            PLAYER2: 'player 2',
-            PLAYER3: 'player 3',
-            PLAYER4: 'player 4'
+            PLAYER1: 'player1',
+            PLAYER2: 'player2',
+            PLAYER3: 'player3',
+            PLAYER4: 'player4'
         }
         
 
-        let state = States.PLAYER_SETUP;
+        const playerNames = [
+            'Player 1',
+            'Player 2',
+            'Player 3',
+            'Player 4'
+        ];
+        
+        let playerCount = 1;
+        let difficulty = 'normal';
+        let concept = 'none';
+        let presentation = null;
+        let playerData = [];
+        let currentSlideIndex = 0;
+        let currentSlide;
+        let currentSlideSentences = [];
 
+        let voiceClips = [];
+        let isDoneWithVoice = false;
+        let speakingInterval = null;
+
+        let mediaStream = null;
+        let audioContent = null;
+        let audioSource = null;
+        let audioProcessor = null;
+        let transcription = '';
+
+        let playersNeedingToTeach = [];
+        let currentPlayerIndex = 0;
+
+        let questionsNeedingAsking = [];
+        let playersNeedingToAnswer = [];
+        let currentQuestionIndex = 0;
+        
+        let responseText = '';
+        
         let ws;
 
+        let state = States.PLAYER_SETUP;
+
+        let waitingMusic;
+
+        let whoIsTalking = Speakers.NOBODY;
 
         function tts(text, speaker) {
+            whoIsTalking = speaker;
             sendCmd(Commands.TTS, {
                 text: text,
                 speaker: speaker
@@ -390,12 +575,15 @@
         }
 
         async function showPage(pageId) {
+            // all top-buttons class should be hidden
+            document.querySelectorAll('.top-buttons').forEach(buttons => buttons.classList.add('is-hidden'));
+            document.getElementById(pageId + '-top-buttons').classList.remove('is-hidden');
             if (pageId === 'config') {
                 await gotoConfigPage();
             } else if (pageId === 'study') {
                 await gotoStudyPage();
-            } else if (pageId === 'ready') {
-                await gotoReadyPage();
+            } else if (pageId === 'q_and_a') {
+                await gotoQandAPage();
             } else if (pageId === 'teach') {
                 await gotoTeachPage();
             } else if (pageId === 'quiz') {
@@ -405,23 +593,37 @@
             }
         }
 
-        function showHelp() {
-            // this should be modal so it doesn't throw off the game
-            showPage('help');
-        }
-
-        function showAbout() {
-            showPage('about');
+        function animateSpeakers() {
+            function setAnimationFrame(target) {
+                document.querySelectorAll('.avatar-' + target).forEach(avatar => {
+                    avatar.classList.add('is-hidden');
+                });
+                const roll = Math.random();
+                if (roll < 0.025) {
+                    document.querySelectorAll('.avatar-' + target + '.avatar-blink').forEach(avatar => {
+                        avatar.classList.remove('is-hidden');
+                    });
+                } else if (whoIsTalking === target && roll < 0.6) {
+                    document.querySelectorAll('.avatar-' + target + '.avatar-talk').forEach(avatar => {
+                        avatar.classList.remove('is-hidden');
+                    });
+                } else {
+                    document.querySelectorAll('.avatar-' + target + '.avatar-normal').forEach(avatar => {
+                        avatar.classList.remove('is-hidden');
+                    });
+                }
+            }
+            [Speakers.PROFESSOR, Speakers.PLAYER1, Speakers.PLAYER2, Speakers.PLAYER3, Speakers.PLAYER4].forEach(setAnimationFrame);
         }
         
         function updatePlayerInputs() {
-            playerCount = parseInt(document.getElementById('playerCount').value);
-            const playerNamesDiv = document.getElementById('playerNames');
+            playerCount = parseInt(document.getElementById('player-count').value);
+            const playerNamesDiv = document.getElementById('player-names');
             
             for (let i = 1; i <= 4; i++) {
-                const input = document.getElementById(`player${i}Name`);
+                const input = document.getElementById(`player-${i}-name`);
                 if (input) {
-                    playerNames[`player${i}Name`] = input.value;
+                    playerNames[i - 1] = input.value;
                 }
             }
             
@@ -430,13 +632,212 @@
                 const playerField = document.createElement('div');
                 playerField.className = 'field player-name-field';
                 playerField.innerHTML = `
-                    <label class="label">Player ${i} Name</label>
-                    <div class="control">
-                        <input class="input" type="text" placeholder="Enter player name" id="player${i}Name" value="${playerNames[`player${i}Name`]}">
+                    <label class="label ml-4">Player ${i} Name</label>
+                    <div class="control ml-4">
+                        <input class="input" type="text" placeholder="Enter player name" id="player-${i}-name" value="${playerNames[i - 1]}">
                     </div>
                 `;
                 playerNamesDiv.appendChild(playerField);
             }
+        }
+
+        function prepareNextTeacher() {
+            stopSpeaking();
+            state = States.TEACHING;
+            currentPlayerIndex = playersNeedingToTeach[0];
+            const nextPlayerButton = document.getElementById('next-player-button');
+            if (playersNeedingToTeach.length === 0) {
+                showPage('quiz');
+                return;
+            } else if (playersNeedingToTeach.length === 1) {
+                nextPlayerButton.classList.remove('is-info');
+                nextPlayerButton.classList.add('is-link');
+                nextPlayerButton.innerText = 'Ready';
+            } else {
+                nextPlayerButton.classList.remove('is-link');
+                nextPlayerButton.classList.add('is-info');
+                nextPlayerButton.innerText = 'Next Teacher';
+            }
+            if (playerNames[playersNeedingToTeach[0]].endsWith('s') || playerNames[playersNeedingToTeach[0]].endsWith('S')) {
+                document.getElementById('teach-title').innerText = playerNames[playersNeedingToTeach[0]] + "' Turn";
+            } else {
+                document.getElementById('teach-title').innerText = playerNames[playersNeedingToTeach[0]] + "'s Turn";
+            }
+            let contestantInfo = playerData[playersNeedingToTeach[0]];
+            contestantInfo.hexColor = Array.from({length: 3}, () => Math.floor(Math.random() * (256 - 120) + 120).toString(16).padStart(2, '0')).join('');
+            const talkContainer = document.getElementById('teaching-avatar-talk');
+            const normalContainer = document.getElementById('teaching-avatar-normal');
+            const blinkContainer = document.getElementById('teaching-avatar-blink');
+            talkContainer.classList.remove('avatar-player1', 'avatar-player2', 'avatar-player3', 'avatar-player4');
+            normalContainer.classList.remove('avatar-player1', 'avatar-player2', 'avatar-player3', 'avatar-player4');
+            blinkContainer.classList.remove('avatar-player1', 'avatar-player2', 'avatar-player3', 'avatar-player4');
+            const avatarId = ['avatar-player1', 'avatar-player2', 'avatar-player3', 'avatar-player4'][playersNeedingToTeach[0]];
+            talkContainer.classList.add(avatarId);
+            normalContainer.classList.add(avatarId);
+            blinkContainer.classList.add(avatarId);
+            talkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy05&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+            if (contestantInfo.gender === 'female') {
+                normalContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy03&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                blinkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy03&eyes=variant22&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+            } else {
+                normalContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy01&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                blinkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy01&eyes=variant01&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+            }
+            document.getElementById('partner-description').innerText = contestantInfo.description
+                .replace(/You are/gi, 'I am')
+                .replace(/yourself/g, 'myself')
+                .replace(/your/g, 'my')
+                .replace(/Yourself/g, 'Myself')
+                .replace(/Your/g, 'My')
+                .replace(/you/gi, 'I');
+            document.getElementById('teach-caption-box').style.setProperty('background-color', `#${contestantInfo.hexColor}`, 'important');
+            const teachButton = document.getElementById('teach-recording-button');
+            teachButton.innerText = 'Thinking...';
+            teachButton.classList.remove('is-danger');
+            teachButton.classList.add('is-info');
+            isDoneWithVoice = false;
+            speakingInterval = setInterval(continueSpeaking, 50);
+            responseText = '';
+            sendCmd(Commands.TEACH_CONTESTANT, {
+                playerIndex: playersNeedingToTeach[0],
+                text: `Hi. My name is ${playerNames[playersNeedingToTeach[0]]}. Please briefly introduce yourself and ask me to teach you about ${concept}.`,
+            });
+            playersNeedingToTeach.shift();
+        }
+
+        function quizButtonPressed() {
+            const nextQuizButton = document.getElementById('quiz-next-button');
+            if (nextQuizButton.innerText === 'Quizzing...') {
+                // TBD: allow them to stop speaking early
+                // stopSpeaking();
+            } else {
+                prepareNextQuestion();
+            }
+        }
+
+        function prepareNextQuestion() {
+            stopSpeaking();
+            state = States.QUIZZING;
+            if (questionsNeedingAsking.length === 0) {
+                showPage('results');
+                return;
+            }
+            const nextQuizButton = document.getElementById('quiz-next-button');
+            nextQuizButton.innerText = 'Quizzing...';
+            nextQuizButton.classList.remove('is-link');
+            nextQuizButton.classList.add('is-info');
+
+            document.getElementById('quiz-answer-caption').innerText = '';
+            document.getElementById('quiz-answer-caption-box').style.removeProperty('background-color');
+
+            for (let i = 0; i < playerCount; i++) {
+                document.getElementById('player-' + (i+1) + '-quiz-score').innerText = playerData[i].score;
+                document.getElementById('player-' + (i+1) + '-quiz-name').innerText = playerNames[i] + '\n(' + playerData[i].name + ')';
+                document.getElementById('player-' + (i+1) + '-quiz-column').classList.remove('has-background-link', 'has-background-link-dark', 'is-hidden');
+                let contestantInfo = playerData[i];
+                contestantInfo.hexColor = Array.from({length: 3}, () => Math.floor(Math.random() * (256 - 120) + 120).toString(16).padStart(2, '0')).join('');
+                const talkContainer = document.getElementById('quizzing-avatar-player-' + (i+1) + '-talk');
+                const normalContainer = document.getElementById('quizzing-avatar-player-' + (i+1) + '-normal');
+                const blinkContainer = document.getElementById('quizzing-avatar-player-' + (i+1) + '-blink');
+                talkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy05&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                if (contestantInfo.gender === 'female') {
+                    normalContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy03&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                    blinkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy03&eyes=variant22&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                } else {
+                    normalContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy01&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                    blinkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy01&eyes=variant01&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                }
+            }
+            for (let i = 4; i > playerCount; i--) {
+                document.getElementById('player-' + i + '-quiz-column').classList.add('is-hidden');
+            }
+            
+            let text = 'Next question: ';
+
+            currentQuestionIndex = 5 - questionsNeedingAsking.length;
+            document.getElementById('question-count').innerText = 'Question ' + (currentQuestionIndex + 1) + ' of 5';
+
+            if (questionsNeedingAsking.length === 5) {
+                text = 'Welcome to Noodle Knocker! First question: ' + presentation.questions[0];
+            } else if (questionsNeedingAsking.length === 4) {
+                text = 'Second question: ' + presentation.questions[1];
+            } else if (questionsNeedingAsking.length === 3) {
+                text = 'Third question: ' + presentation.questions[2];
+            } else if (questionsNeedingAsking.length === 2) {
+                text = 'Fourth question: ' + presentation.questions[3];
+            } else if (questionsNeedingAsking.length === 1) {
+                text = 'Last question: ' + presentation.questions[4];
+            }
+            document.getElementById('quiz-help').innerText = 'The question is: ' + text.split(':', 2)[1];
+
+            const converter = new showdown.Converter();
+            document.getElementById('quiz-professor-caption').innerHTML = converter.makeHtml(text);
+            tts(text, Speakers.PROFESSOR);
+
+            playersNeedingToAnswer = [0, 1, 2, 3].slice(0, playerCount).sort(() => Math.random() - 0.5);
+
+            questionsNeedingAsking.shift();
+
+        }
+
+        function prepareNextAnswer() {
+            if (playersNeedingToAnswer.length === 0) {
+                const nextQuizButton = document.getElementById('quiz-next-button');
+                nextQuizButton.classList.remove('is-info');
+                nextQuizButton.classList.add('is-link');
+                if (questionsNeedingAsking.length === 0) {
+                    nextQuizButton.innerText = 'Ready';
+                } else {
+                    nextQuizButton.innerText = 'Next Question';
+                }
+                return;
+            }
+            currentPlayerIndex = playersNeedingToAnswer.shift();
+            const contestantInfo = playerData[currentPlayerIndex];
+            document.getElementById('player-' + (currentPlayerIndex+1) + '-quiz-column').classList.add('has-background-link');
+            document.getElementById('quiz-answer-caption-box').style.setProperty('background-color', `#${contestantInfo.hexColor}`, 'important');
+            //document.getElementById('quiz-professor-caption').innerText = '';
+            isDoneWithVoice = false;
+            speakingInterval = setInterval(continueSpeaking, 50);
+            responseText = '';
+            sendCmd(Commands.CONTESTANT_QUIZ, {
+                playerIndex: currentPlayerIndex,
+                questionIndex: currentQuestionIndex
+            });
+        }
+
+        function processGrade(playerIndex, grade) {
+            const contestantInfo = playerData[playerIndex];
+            const oldScore = playerData[playerIndex].score;
+            const additionalScore = grade * (currentQuestionIndex + 1) * 10;
+            playerData[playerIndex].score = oldScore + additionalScore;
+            document.getElementById('player-' + (playerIndex+1) + '-quiz-score').innerHTML = oldScore + '<br/><span class="has-text-success">+' + additionalScore + '</span>';
+        }
+
+        function toggleRecordingTeaching() {
+            try {
+                const teachButton = document.getElementById('teach-recording-button');
+                if (teachButton.innerText === 'Start Talking') {
+                    stopSpeaking();
+                    teachButton.innerText = ' Start Talking ';
+                    startTranscribing();
+                    setTimeout(() => {
+                        teachButton.innerText = 'Recording (Press to Finish)';
+                        teachButton.classList.remove('is-warning');
+                        teachButton.classList.add('is-danger');
+                    }, 500);
+                } else if (teachButton.innerText === 'Recording (Press to Finish)') {
+                    teachButton.innerText = 'Thinking...';
+                    teachButton.classList.remove('is-danger');
+                    teachButton.classList.add('is-info');
+                    stopTranscribing();
+                    isDoneWithVoice = false;
+                    speakingInterval = setInterval(continueSpeaking, 50);
+                }
+            } catch (err) {
+                console.error(err);
+            }            
+
         }
 
 
@@ -449,24 +850,31 @@
         async function gotoStudyPage() {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('study').classList.add('is-active');
+            state = States.STUDYING;
         }
 
-        async function gotoReadyPage() {
+        async function gotoQandAPage() {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
-            document.getElementById('ready').classList.add('is-active');
-
+            document.getElementById('q_and_a').classList.add('is-active');
+            state = States.Q_AND_A;
         }
 
         async function gotoTeachPage() {
+            if (document.getElementById('question-recording-button').innerText !== 'Ask Question') {
+                stopSpeaking();
+            }
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('teach').classList.add('is-active');
-
+            playersNeedingToTeach = [0, 1, 2, 3].slice(0, playerCount).sort(() => Math.random() - 0.5);
+            prepareNextTeacher();
         }
 
         async function gotoQuizPage() {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('quiz').classList.add('is-active');
-
+            document.getElementById('quiz-help').innerText = 'It\'s quiz time! Let\'s see how well your partner has grasped the topic. Good luck!';
+            questionsNeedingAsking = presentation.questions.slice();
+            prepareNextQuestion();
         }
 
         async function gotoResultsPage() {
@@ -476,15 +884,121 @@
         }
 
         async function startGame() {
+            // silent.mp3 is played to avoid popping and audio loss on some audio systems when audio is frequently started and stopped
+            document.getElementById('silent-player').play();
             updatePlayerInputs();
             difficulty = document.getElementById('difficulty').value;
             document.getElementById('concept-trivia').innerText = 'Generating...';
             document.getElementById('waiting-to-start-game-modal').classList.add('is-active');
             state = States.WAITING_FOR_GENERATION;
             sendCmd(Commands.GENERATE, {
+                'playerNames': playerNames,
                 'playerCount': playerCount,
                 'difficulty': difficulty
-            });            
+            });
+            waitingMusic = new Audio('/waiting-loop.mp3');
+            waitingMusic.loop = true;
+            waitingMusic.play();
+        }
+
+        
+        function convertFloat32ToInt16(float32Array) {
+            let int16Array = new Int16Array(float32Array.length);
+            for (let i = 0; i < float32Array.length; i++) {
+                int16Array[i] = Math.max(-1, Math.min(1, float32Array[i])) * 0x7FFF;
+            }
+            return int16Array;
+        }
+
+        async function startTranscribing() {
+            transcription = '';
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            audioSource = audioContext.createMediaStreamSource(mediaStream);
+            audioProcessor = audioContext.createScriptProcessor(2048, 1, 1)
+            sendCmd(Commands.START_TRANSCRIBING, {
+                'sampleRate': audioContext.sampleRate
+            });
+            audioProcessor.onaudioprocess = function (evt) {
+                let inputData = evt.inputBuffer.getChannelData(0);
+                let rawAudioData = convertFloat32ToInt16(new Float32Array(inputData));
+                ws.send(rawAudioData);
+            }
+            audioSource.connect(audioProcessor);
+            audioProcessor.connect(audioContext.destination);
+        }
+
+        async function stopTranscribing() {
+            if (audioContext) {
+                audioProcessor.disconnect();
+                audioSource.disconnect();
+                await audioContext.close();
+                audioContext = null;
+        
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    mediaStream = null;
+                }
+                sendCmd(Commands.STOP_TRANSCRIBING);
+            }
+        }
+
+        async function toggleRecordingQuestion() {
+            try {
+                const questionsButton = document.getElementById('question-recording-button');
+                if (questionsButton.innerText === 'Ask Question') {
+                    stopSpeaking();
+                    questionsButton.innerText = ' Ask Question ';
+                    startTranscribing();
+                    setTimeout(() => {
+                        questionsButton.innerText = 'Recording (Press to Finish)';
+                        questionsButton.classList.remove('is-warning');
+                        questionsButton.classList.add('is-danger');
+                    }, 500);
+                } else if (questionsButton.innerText === 'Recording (Press to Finish)') {
+                    questionsButton.innerText = 'Thinking...';
+                    questionsButton.classList.remove('is-danger');
+                    questionsButton.classList.add('is-info');
+                    stopTranscribing();
+                    isDoneWithVoice = false;
+                    speakingInterval = setInterval(continueSpeaking, 50);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function splitIntoCaptions(text) {
+            const MIN_SENTENCE_LENGTH = 50;
+            const MIN_CAPTION_LENGTH = 100;
+        
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+            let captions = [];
+            let currentCaption = "";
+        
+            for (let i = 0; i < sentences.length; i++) {
+                const sentence = sentences[i].trim();
+                const nextSentence = (i + 1 < sentences.length) ? sentences[i + 1].trim() : "";
+                
+                if (sentence.length < MIN_SENTENCE_LENGTH && nextSentence.length < MIN_SENTENCE_LENGTH) {
+                    currentCaption += sentence + " ";
+                } else {
+                    currentCaption += sentence + " ";
+                    if (currentCaption.length >= MIN_CAPTION_LENGTH || i === sentences.length - 1) {
+                        captions.push(currentCaption.trim());
+                        currentCaption = "";
+                    }
+                }
+            }
+            
+            if (currentCaption.length > 0) {
+                captions.push(currentCaption.trim());
+            }
+        
+            return captions;
         }
 
         function showSlide(slideIndex) {
@@ -495,16 +1009,19 @@
             const slideElement = document.getElementById('slide');
             slideElement.innerHTML = `<div>${slideHtml}</div>`;
             let nextSlideButton = document.getElementById('next-slide-button');
+            nextSlideButton.classList.remove('is-link');
+            nextSlideButton.classList.add('is-info');
             if (currentSlideIndex === presentation.slides.length - 1) {
                 nextSlideButton.innerText = 'Ready';
-                nextSlideButton.classList.remove('is-info');
-                nextSlideButton.classList.add('is-link');
             } else {
                 nextSlideButton.innerText = 'Next Slide';
-                nextSlideButton.classList.remove('is-link');
-                nextSlideButton.classList.add('is-info');
             }
+            stopSpeaking();
+            currentSlideSentences = splitIntoCaptions(currentSlide.narration);
+            speakingInterval = setInterval(continueSpeaking, 50);
         }
+
+
 
         function prevSlide() {
             if (currentSlideIndex > 0) {
@@ -518,8 +1035,73 @@
                 currentSlideIndex++;
                 showSlide(currentSlideIndex);
             } else {
-                showPage('ready');
+                stopSpeaking();
+                showPage('q_and_a');
             }
+        }
+
+        function continueSpeaking() {
+            const voicePlayer = document.getElementById('voice-player');
+            if (voicePlayer.paused) {
+                if (voiceClips.length > 0) {
+                    const data = voiceClips.shift();
+                    if (!data) {
+                        return;
+                    }
+                    const url = URL.createObjectURL(data);
+                    voicePlayer.src = url;
+                    voicePlayer.load();
+                    voicePlayer.onloadeddata = function() {
+                        voicePlayer.play();
+                    }
+                } else if (isDoneWithVoice) {
+                    const wasProfessor = whoIsTalking === Speakers.PROFESSOR;
+                    whoIsTalking = Speakers.NOBODY;
+                    if (speakingInterval !== null) {
+                        clearInterval(speakingInterval);
+                        speakingInterval = null;
+                    }
+                    if (currentSlideSentences.length > 0) {
+                        const caption = currentSlideSentences.shift();
+                        const captionElem = document.getElementById('slide-caption');
+                        captionElem.innerText = caption;
+                        tts(caption, Speakers.PROFESSOR);
+                    } else if (state === States.STUDYING) {
+                        const nextSlideButton = document.getElementById('next-slide-button');
+                        nextSlideButton.classList.remove('is-info');
+                        nextSlideButton.classList.add('is-link');                   
+                    } else if (state === States.QUIZZING) {
+                        if (wasProfessor) {
+                            prepareNextAnswer();
+                        } else {
+                            const columnElem = document.getElementById('player-' + (currentPlayerIndex+1) + '-quiz-column');
+                            columnElem.classList.remove('has-background-link');
+                            columnElem.classList.add('has-background-link-dark');
+                            isDoneWithVoice = false;
+                            speakingInterval = setInterval(continueSpeaking, 50);
+                            responseText = '';
+                            sendCmd(Commands.PROFESSOR_QUIZ, {
+                                playerIndex: currentPlayerIndex,
+                                questionIndex: currentQuestionIndex
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        function stopSpeaking() {
+            whoIsTalking = Speakers.NOBODY;
+            if (speakingInterval !== null) {
+                clearInterval(speakingInterval);
+                speakingInterval = null;                     
+            }
+            currentSlideSentences = [];
+            voiceClips = [];
+            sendCmd(Commands.STOP_GENERATING_SPEECH, {});
+            const voicePlayer = document.getElementById('voice-player');
+            voicePlayer.pause();
+            isDoneWithVoice = true;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -530,9 +1112,7 @@
             }
 
             ws.onopen = function (event) {
-                console.log('opening...');
             };
-
             
             ws.onmessage = function (event) {
                 if (typeof event.data === 'string') {                    
@@ -550,79 +1130,142 @@
                             if (state === States.WAITING_FOR_GENERATION) {
                                 triviaIndex = (triviaIndex + 1) % triviaItems.length;
                                 document.getElementById('concept-trivia').innerText = triviaItems[triviaIndex];
-                                setTimeout(setNextTrivia, 8000);
+                                setTimeout(setNextTrivia, 10000);
                             }
                         }
                         setNextTrivia();
                     } else if (cmd === Commands.GENERATE_DONE) {
                         console.log(jsonData);
+                        waitingMusic.pause();
+                        waitingMusic = null;
+                        console.log(JSON.stringify(jsonData.presentation));
+                        presentation = jsonData.presentation;
+                        playerData = jsonData.playerData;
+                        console.log(JSON.stringify(playerData));
                         document.getElementById('waiting-to-start-game-modal').classList.remove('is-active');
 
-                        showPage('study');
-                        audioKey = jsonData.audioKey;
-                        audioEndpoint = jsonData.audioEndpoint;
+                        showPage('quiz');
+                        return;
 
-                        presentation = jsonData.presentation;
+                        // XXX
+                        showPage('study');
                         showSlide(0);
                         document.getElementById('slide-image').innerHTML = `<img src="${jsonData.base64Image}"/>`;
                         
                         state = States.STUDYING;
+                    } else if (cmd === Commands.DONE_SPEAKING) {
+                        isDoneWithVoice = true;
+                    } else if (cmd === Commands.TRANSCRIBED) {
+                        transcription += jsonData.text + ' ';
+                    } else if (cmd === Commands.TRANSCRIBE_DONE) {
+                        if (state === States.Q_AND_A) {
+                            if (transcription.trim().length > 0) {
+                                responseText = '';
+                                document.getElementById('questions-caption').innerHTML = '';
+                                sendCmd(Commands.ASK_QUESTION, {
+                                    text: transcription
+                                })                                    
+                            } else {
+                                const questionsButton = document.getElementById('question-recording-button');
+                                questionsButton.innerText = 'Ask Question';
+                                questionsButton.classList.remove('is-info');
+                                questionsButton.classList.add('is-warning');
+                            }
+                        } else if (state === States.TEACHING) {
+                            if (transcription.trim().length > 0) {
+                                responseText = '';
+                                document.getElementById('teach-caption').innerHTML = '';
+                                sendCmd(Commands.TEACH_CONTESTANT, {
+                                    playerIndex: currentPlayerIndex,
+                                    text: transcription
+                                })                                    
+                            } else {
+                                const teachButton = document.getElementById('teach-recording-button');
+                                teachButton.innerText = 'Start Talking';
+                                teachButton.classList.remove('is-info');
+                                teachButton.classList.add('is-warning');
+                            }                            
+                        }
+                    } else if (cmd === Commands.ASK_QUESTION_ANSWER_PART) {
+                        const teachButton = document.getElementById('question-recording-button');
+                        whoIsTalking = Speakers.PROFESSOR;
+                        questionsButton.innerText = 'Answering...';
+                        responseText += jsonData.text + ' ';
+                        const converter = new showdown.Converter();
+                        document.getElementById('questions-caption').innerHTML = converter.makeHtml(responseText);
+                    } else if (cmd === Commands.ASK_QUESTION_FINISHED) {
+                        const questionsButton = document.getElementById('question-recording-button');
+                        questionsButton.innerText = 'Ask Question';
+                        questionsButton.classList.remove('is-info');
+                        questionsButton.classList.add('is-warning');
+                    } else if (cmd === Commands.TEACH_CONTESTANT_ANSWER_PART) {
+                        const teachButton = document.getElementById('teach-recording-button');
+                        whoIsTalking = jsonData.speaker;
+                        teachButton.innerText = 'Answering...';
+                        responseText += jsonData.text + ' ';
+                        const converter = new showdown.Converter();
+                        document.getElementById('teach-caption').innerHTML = converter.makeHtml(responseText);
+                    } else if (cmd === Commands.TEACH_CONTESTANT_FINISHED) {
+                        const teachButton = document.getElementById('teach-recording-button');
+                        teachButton.innerText = 'Start Talking';
+                        teachButton.classList.remove('is-info');
+                        teachButton.classList.add('is-warning');
+                    } else if (cmd === Commands.CONTESTANT_QUIZ_ANSWER_PART) {
+                        whoIsTalking = jsonData.speaker;
+                        responseText += jsonData.text + ' ';
+                        const converter = new showdown.Converter();
+                        document.getElementById('quiz-answer-caption').innerHTML = converter.makeHtml(responseText);
+                    } else if (cmd === Commands.CONTESTANT_QUIZ_FINISHED) {
+                        console.log('Okay, now grade the answer...');
+                    } else if (cmd === Commands.PROFESSOR_QUIZ_ANSWER_PART) {
+                        whoIsTalking = Speakers.PROFESSOR;
+                        responseText += jsonData.text + ' ';
+                        const converter = new showdown.Converter();
+                        document.getElementById('quiz-professor-caption').innerHTML = converter.makeHtml(responseText);                        
+                    } else if (cmd === Commands.PROFESSOR_QUIZ_FINISHED) {
+                        processGrade(jsonData.playerIndex, jsonData.grade);
                     }
                 } else {
-                    // We presume this is an MP3 file
-                    const url = URL.createObjectURL(event.data);
-                    const voicePlayer = document.getElementById('voice-player');
-                    voicePlayer.src = url;
-                    voicePlayer.play();
+                    console.log('got audio chunk');
+                    voiceClips.push(event.data);
+                    isDoneWithVoice = false;
+                    if (speakingInterval === null) {
+                        speakingInterval = setInterval(continueSpeaking, 50);
+                    }
                 }
             };
 
             ws.onclose = function (event) {
-                console.log('closing...');
                 console.log(event);
             };
 
 
             updatePlayerInputs();
 
-            function delayed() {
+            setInterval(animateSpeakers, 70);
 
-                const testText = `[{"textContent":"# Unemployment \n### An Introduction by Professor Noodle","narration":"Hello, everyone! I'm Professor Noodle, and today we're going to explore the fascinating concept of Unemployment within the field of Labor Economics. Let's dive in! Over the next few slides, we'll unravel the intricacies of this concept, examine its relevance, and discover its practical applications. By the end of this presentation, you'll have a solid understanding of Unemployment and its significance."},{"textContent":"## What is Unemployment?\nUnemployment refers to the state of being jobless or without paid work. It describes a situation where individuals who are able and willing to work are unable to find suitable employment. Unemployment is a crucial indicator of the overall health and performance of an economy.","narration":"To start, let's understand what Unemployment is. Unemployment refers to the state of being jobless or without paid work. It describes a situation where individuals who are able and willing to work are unable to find suitable employment. Unemployment is a crucial indicator of the overall health and performance of an economy. For instance, high levels of unemployment can signal an economic downturn or recession, while low unemployment typically indicates a thriving job market."},{"textContent":"## Key Aspects of Unemployment\n- Causes of Unemployment: Economic factors, such as recessions, changes in technology, and shifts in consumer demand, can lead to job losses and unemployment.\n- Types of Unemployment: There are different types of unemployment, including frictional, structural, and cyclical, each with its own underlying causes and implications.\n- Measuring Unemployment: Governments use various metrics, such as the unemployment rate, to quantify and track the level of unemployment in an economy.","narration":"Now, let's look at some key aspects of Unemployment. First, the causes of Unemployment can include economic factors, such as recessions, changes in technology, and shifts in consumer demand, which can lead to job losses and unemployment. \n\nNext, there are different types of unemployment, including frictional, structural, and cyclical, each with its own underlying causes and implications. Frictional unemployment, for instance, occurs when workers are transitioning between jobs, while structural unemployment is caused by a mismatch between the skills of workers and the requirements of available jobs.\n\nLastly, governments use various metrics, such as the unemployment rate, to quantify and track the level of unemployment in an economy. This data is crucial for policymakers to understand the state of the job market and implement appropriate measures to address unemployment."},{"textContent":"## Impacts of Unemployment\n- Economic Impact: High unemployment can lead to reduced consumer spending, decreased tax revenue, and increased government spending on social welfare programs, which can slow economic growth.\n- Social Impact: Unemployment can have significant social consequences, such as increased poverty, mental health issues, and strained social relationships.\n- Policy Responses: Governments often implement policies, such as job training programs, unemployment benefits, and economic stimulus measures, to address and mitigate the effects of unemployment.","narration":"Now, let's explore the impacts of Unemployment. First, high unemployment can have a significant economic impact, leading to reduced consumer spending, decreased tax revenue, and increased government spending on social welfare programs, which can slow economic growth. \n\nUnemployment can also have substantial social impacts, such as increased poverty, mental health issues, and strained social relationships. Individuals who lose their jobs can face financial hardship, reduced self-esteem, and difficulties maintaining their standard of living and social connections.\n\nIn response to these challenges, governments often implement policies to address and mitigate the effects of unemployment. These policies can include job training programs, unemployment benefits, and economic stimulus measures aimed at creating new job opportunities and supporting those affected by joblessness."},{"textContent":"## Factors Influencing Unemployment\n- Demographic Factors: Characteristics like age, gender, and education level can influence an individual's likelihood of experiencing unemployment.\n- Macroeconomic Conditions: The overall state of the economy, including factors like GDP growth, inflation, and interest rates, can have a significant impact on unemployment levels.\n- Labor Market Dynamics: Factors such as labor force participation, job creation, and labor market regulations can affect the balance between supply and demand for workers.","narration":"Next, let's examine some of the key factors that influence Unemployment. Demographic factors, such as age, gender, and education level, can play a significant role in an individual's likelihood of experiencing unemployment. For example, younger workers and those with lower levels of education may face greater challenges in finding and securing employment.\n\nMoreover, the overall macroeconomic conditions, including GDP growth, inflation, and interest rates, can have a substantial impact on unemployment levels. During periods of economic expansion and prosperity, the job market tends to be more robust, with more opportunities available. Conversely, economic downturns and recessions often lead to higher unemployment.\n\nFinally, labor market dynamics, such as labor force participation, job creation, and labor market regulations, can affect the balance between the supply and demand for workers. Policies that promote job creation and support worker training and development can help alleviate unemployment in the long run."},{"textContent":"## Conclusion\n### Recap of Unemployment\n- Unemployment is a crucial indicator of the overall health and performance of an economy.\n- There are various causes and types of unemployment, each with its own implications.\n- Unemployment can have significant economic and social impacts, leading governments to implement various policy responses.\n- Factors such as demographics, macroeconomic conditions, and labor market dynamics can influence unemployment levels.","narration":"To wrap up, let's recap what we've learned about Unemployment. We've covered how Unemployment is a crucial indicator of the overall health and performance of an economy, with various causes and types, each with its own implications. We also explored how Unemployment can have significant economic and social impacts, leading governments to implement various policy responses to address these challenges.\n\nFinally, we examined how factors such as demographics, macroeconomic conditions, and labor market dynamics can influence unemployment levels. The nuances and details we've discussed are what truly bring the concept of Unemployment to life and underscore its importance in the field of Labor Economics. Thank you for your attention, and I hope you now have a deeper understanding of this fascinating topic."}]`.replace(/\n|\r/g, '\\n');
-
-                showPage('study');
-                presentation = {
-                    slides: JSON.parse(testText),
-                    questions: [
-                        {
-                        question: 'What is the basic definition of Unemployment?',
-                        answer: 'Unemployment refers to the state of being jobless or without paid work. It describes a situation where individuals who are able and willing to work are unable to find suitable employment.'
-                        },
-                        {
-                        question: 'Name one key aspect of Unemployment discussed in the presentation.',
-                        answer: 'One key aspect of Unemployment discussed in the presentation is the causes of Unemployment, which can include economic factors such as recessions, changes in technology, and shifts in consumer demand.'
-                        },
-                        {
-                        question: 'How does Unemployment impact the field of Labor Economics?',
-                        answer: 'Unemployment is a crucial indicator of the overall health and performance of an economy, which is the central focus of the field of Labor Economics. High unemployment can signal an economic downturn or recession, while low unemployment typically indicates a thriving job market, both of which are important for Labor Economists to understand and analyze.'
-                        },
-                        {
-                        question: 'Describe the relationship between the causes of Unemployment and the types of Unemployment discussed in the presentation.',
-                        answer: 'The causes of Unemployment, such as economic factors, can lead to different types of unemployment, including frictional, structural, and cyclical. For example, a recession (an economic factor) can lead to cyclical unemployment, while changes in technology (another economic factor) can result in structural unemployment due to a mismatch between worker skills and job requirements.'
-                        },
-                        {
-                        question: 'Summarize the main points covered in the conclusion of the presentation.',
-                        answer: 'The main points covered in the conclusion of the presentation are: 1) Unemployment is a crucial indicator of the overall health and performance of an economy, 2) There are various causes and types of unemployment, each with its own implications, 3) Unemployment can have significant economic and social impacts, leading governments to implement policy responses, and 4) Factors such as demographics, macroeconomic conditions, and labor market dynamics can influence unemployment levels.'
-                        }
-                    ]
-                };
-                
-                showSlide(0);
-
-                tts('Hello! This is a test.', Speakers.PROFESSOR);
-
-                state = States.STUDYING;
+            var userAgent = navigator.userAgent.toLowerCase();
+            if (userAgent.includes('safari') && !userAgent.includes('chrome')) {
+                // Safari has super-strict audio playback restrictions that prevent background handling on the incoming voice audio data.
+                alert('Sorry, but Safari is not currently supported. Please use a different browser like Chrome, Firefox, or Edge.')
             }
-            setTimeout(delayed, 1500);
+
+            
+            setTimeout(() => {
+                console.log('hmm?');
+                //showPage('quiz');
+                
+                
+                //tts('This is a basic text-to-speech test.', Speakers.PROFESSOR);    
+            }, 300);
+
+            playerCount = 4;
+            
+            playerData = [{"name":"Harmony","gender":"female","score":0,"description":"You are Harmony, a baker. Sweet and methodical, you often use baking analogies and have a habit of offering baked goods to illustrate your points."},{"name":"Gabriel","gender":"male","score":0,"description":"You are Gabriel, a pirate. Boisterous and adventurous, you speak in pirate slang and have a habit of turning conversations into grand tales of the high seas."},{"name":"Kenneth","gender":"male","score":0,"description":"You are Kenneth, a fisherman. Patient and observant, you often use fishing metaphors and have a habit of turning everyday situations into fishing stories."},{"name":"Vladimir","gender":"male","score":0,"description":"You are Vladimir, a yogi. Calm and centered, you speak in yoga terms and often incorporate meditation tips into your advice."}];
+
+            presentation = {"slides":[{"textContent":"# Marine Biotechnology","narration":"Hello everyone, I'm Professor Noodle, and today I'm excited to share with you the fascinating world of Marine Biotechnology. As an expert in Marine Biology, I'll be taking you on a journey to explore the incredible applications and innovations arising from the ocean's vast resources."},{"textContent":"# What is Marine Biotechnology?\n\n- Applying biological knowledge and techniques to the marine environment\n- Harnessing the potential of marine organisms and their unique properties\n- Developing new products, processes, and technologies for various industries","narration":"So, what exactly is Marine Biotechnology? In simple terms, it's the application of biological knowledge and techniques to the marine environment. By harnessing the incredible potential of marine organisms and their unique properties, we can develop new and innovative products, processes, and technologies for a wide range of industries, from pharmaceuticals to agriculture and beyond."},{"textContent":"# Pharmaceutical Applications\n\n- Discovering new drugs from marine organisms\n- Developing novel antibiotics and antimicrobial compounds\n- Exploring the potential of marine-derived enzymes and biomolecules","narration":"One of the most exciting areas of Marine Biotechnology is its potential in the pharmaceutical industry. Researchers are constantly discovering new drugs and medicinal compounds from marine organisms, such as sponges, algae, and microbes. These organisms have evolved unique biochemical properties that can be harnessed for the development of novel antibiotics, antimicrobial agents, and other therapeutics. Additionally, marine-derived enzymes and biomolecules are being explored for their diverse applications in drug development and production."},{"textContent":"# Environmental Applications\n\n- Bioremediation of polluted marine environments\n- Development of sustainable aquaculture and mariculture techniques\n- Utilization of marine biomass for biofuel production","narration":"Marine Biotechnology also has significant applications in the environmental realm. Researchers are using marine organisms and their capabilities to aid in the bioremediation of polluted marine environments, helping to clean up oil spills, heavy metal contamination, and other forms of pollution. Additionally, Marine Biotechnology is contributing to the development of more sustainable aquaculture and mariculture practices, as well as the utilization of marine biomass for the production of biofuels and other renewable energy sources."},{"textContent":"# Industrial Applications\n\n- Extraction of valuable compounds from marine organisms\n- Production of specialty chemicals and cosmetic ingredients\n- Development of new materials and textiles inspired by marine life","narration":"Beyond the pharmaceutical and environmental sectors, Marine Biotechnology also has a wide range of industrial applications. Researchers are extracting valuable compounds, such as pigments, enzymes, and biopolymers, from marine organisms and using them to develop specialty chemicals, cosmetic ingredients, and even new materials and textiles inspired by the unique properties of marine life. The potential for innovation and disruption in these industries is truly remarkable."},{"textContent":"# Conclusion\n\n- Marine Biotechnology is a rapidly evolving field with immense potential\n- By harnessing the unique properties and capabilities of marine organisms, we can develop groundbreaking solutions to global challenges\n- The future of Marine Biotechnology is bright, with endless possibilities for innovation and discovery","narration":"In conclusion, Marine Biotechnology is a rapidly evolving and incredibly exciting field. By continuing to explore and harness the incredible potential of the marine environment, we can develop groundbreaking solutions to global challenges, from developing new lifesaving drugs to addressing environmental concerns and driving industrial innovation. The future of Marine Biotechnology is bright, and I can't wait to see what the next generation of researchers and innovators will accomplish. Thank you all for your attention, and I hope you're as inspired as I am to learn more about this fascinating field."}],"questions":["What is the primary focus of Marine Biotechnology?","How can Marine Biotechnology contribute to the development of new drugs and antibiotics?","What are some of the environmental applications of Marine Biotechnology?","How can Marine Biotechnology be used to produce specialty chemicals and materials?","What is the overall potential of Marine Biotechnology in addressing global challenges?"]};
+           showPage('config');
+
         });
 
     </script>

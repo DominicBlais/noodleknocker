@@ -1,21 +1,41 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { Buffer } from 'node:buffer';
-import { w3cwebsocket } from 'websocket';
 
 import Anthropic from '@anthropic-ai/sdk';
 
+import { w3cwebsocket } from 'websocket';
+import { Validator } from '@cfworker/json-schema';
+
 import homeHtml from "./html/index.html";
 import conceptFieldPairs from "./concept_field_pairs";
-
-// 94.28
+import { contestants, maleNames, femaleNames } from "./contestants";
+import { waitingLoopMp3, silent5SecMp3 } from "./encoded_statics";
 
 const Commands = {
 	GENERATE: 'generate',
 	GENERATE_STARTED: 'generate-started',
 	GENERATE_DONE: 'generate-done',
 	TTS: 'tts',
-	SAY: 'say'
+	SAY: 'say',
+	STOP_GENERATING_SPEECH: 'stop-generating-speech',
+	DONE_SPEAKING: 'done-speaking',
+	START_TRANSCRIBING: 'start-transcribing',
+	STOP_TRANSCRIBING: 'stop-transcribing',
+	TRANSCRIBED: 'transcribed',
+	TRANSCRIBE_DONE: 'transcribe-done',
+	ASK_QUESTION: 'ask-question',
+	ASK_QUESTION_ANSWER_PART: 'ask-question-answer-part',
+	ASK_QUESTION_FINISHED: 'ask-question-finished',
+	TEACH_CONTESTANT: 'teach-contestant',
+	TEACH_CONTESTANT_ANSWER_PART: 'teach-contestant-answer-part',
+	TEACH_CONTESTANT_FINISHED: 'teach-contestant-finished',
+	CONTESTANT_QUIZ: 'contestant-quiz',
+	CONTESTANT_QUIZ_ANSWER_PART: 'contestant-quiz-answer-part',
+	CONTESTANT_QUIZ_FINISHED: 'contestant-quiz-finished',
+	PROFESSOR_QUIZ: 'professor-quiz',
+	PROFESSOR_QUIZ_ANSWER_PART: 'professor-quiz-answer-part',
+	PROFESSOR_QUIZ_FINISHED: 'professor-quiz-finished',
 }
 
 const Difficulties = {
@@ -24,94 +44,96 @@ const Difficulties = {
 	HARD: 'hard',
 }
 
+const Speakers = {
+	PLAYER1: 'player1',
+	PLAYER2: 'player2',
+	PLAYER3: 'player3',
+	PLAYER4: 'player4',
+	PROFESSOR: 'professor'
+}
+
+const PROFESSOR_VOICE = 'aura-athena-en';
+
+const FEMALE_SPEAKER_VOICES = [
+	'aura-asteria-en',
+	'aura-luna-en',
+	'aura-stella-en',
+	'aura-hera-en'
+];
+
+const MALE_SPEAKER_VOICES = [
+	'aura-angus-en',
+	'aura-orion-en',
+	'aura-perseus-en',
+	'aura-orpheus-en',
+	'aura-zeus-en',
+	'aura-helios-en'
+];
+
 const Prompts = {
 	CREATE_TRIVIA: `Please create 2 to 5 short trivia sentences related to the concept of "{{CONCEPT}}" within the field of study, {{FIELD_OF_STUDY}}. The trivia sentences should be humorous, bizarre, or otherwise interesting.`,
 
-	GENERATE_PRESENTATION: `Please create an interesting, factual, and engaging presentation on the concept of "{{CONCEPT}}" within the field of {{FIELD_OF_STUDY}}. The presentation should include 6 slides, starting with a title slide and ending with a conclusion slide. Each slide should contain concise, markdown-formatted textual content to be displayed to the audience, along with the exact narration that should accompany each slide. 
+	GENERATE_PRESENTATION: `Please create an interesting, factual, and engaging presentation on the concept of "{{CONCEPT}}" within the field of {{FIELD_OF_STUDY}}. The presentation should include 6 slides, starting with a title slide and ending with a conclusion slide. Each slide should contain concise, markdown-formatted text content to be displayed to the audience, along with the exact narration that should accompany each slide. 
 
-Key points for the presentation:
-1. **Title Slide:** Introduce the presentation and yourself as Professor Noodle.
-2. **Content Slides:** Present the concept in a clear, structured manner.
-3. **Conclusion Slide:** Summarize the key points of the presentation.
+Typical presentation structure:
+**Title Slide:** Introduce the presentation and yourself as Professor Noodle.
+**Introduction Slide:** Provide an overview of the concept.
+**4 Content Slides:** Present the concept in a clear, structured manner, investigating four key areas in a connected way that builds upon each pervious slide.
+**Conclusion Slide:** Summarize the key points of the presentation and conclude with a thought-provoking or humorous conclusion.
+
+Besides the Title Slide, each slide's text content should generally consist of a header showing the topic, followed by 3 to 5 unnumbered bullet points. The narration should not simply read the slide's text content, but expand and elaborate on it, adding examples, details, analogies, and other interesting information. The narration should be engaging, thought-provoking, and informative, with occasional humor or other attention-holding elements. 
 
 Additionally, the presentation should include 5 test questions of increasing difficulty to assess the audience's understanding. These questions should be fully answerable by paying attention to the presentation, without requiring any outside knowledge. Each question should have a brief and concise answer.
 
+The presentation will take about 3 minutes to present.
+
+**All information in the presentation should be factual (except for obvious jokes and puns)!**
+
+{{DIFFICULTY_SNIPPET}}
+`,
+
+	SYSTEM_GENERATE_PRESENTATION: `You are Professor Noodle, an excellent communicator and presenter who is an expert on {{CONCEPT}} in the field of {{FIELD_OF_STUDY}}.`,
+
+	SYSTEM_ASK_QUESTION: `You are Professor Noodle, a skilled speaker who is an expert on {{CONCEPT}} in the field of {{FIELD_OF_STUDY}}. You have just finished giving a short presentation on the concept of "{{CONCEPT}}" as part of a learning game called Noodle Knocker. The user has been invited to ask you questions related to the presentation. Please answer these questions in a very concise, clear, and conversational manner, primarily using the Presentation Transcript below but freely supplementing with additional factual information. Avoid directly quoting the presentation, but instead paraphrase or expand on its text as needed. If the user wants to ask a question that appears unrelated to {{CONCEPT}} or the presentation, try your best to guess or infer a relationship between their question and the presentation.
+	
+**Important:** Your responses should be limited to spoken content only. Don't include any non-verbal elements such as actions, emotes, or descriptions.
+
+## Presentation Transcript
+
+{{PRESENTATION_TRANSCRIPT}}`,
+
+	SYSTEM_TEACH_ADDENDUM: `The user will be conversationally teaching you about {{CONCEPT}} in the field of {{FIELD_OF_STUDY}}. Restrict your knowledge about this topic to only what the user teaches you and what you might rasonably infer from your occupation. You are very curious about {{CONCEPT}}, and are a very fast learner good at understanding the user's intentions even when they are unclear or garbled. Ask clarifying questions if it's helpful to understanding the topic. Remember: the only knowledge you have about the topic is what the user teaches you!
+
+**Important:** Your responses should be limited to spoken content only. Don't include any non-verbal elements such as actions, emotes, or descriptions. Keep your responses very short, clear, and conversational.`,
+
+	SYSTEM_ANSWER_ADDENDUM: `The user will be asking you a question about {{CONCEPT}} in the field of {{FIELD_OF_STUDY}}. You must answer the question using *only* the information in the Teaching Conversation you had with {{PLAYER}} and what you might reasonably infer from your occupation. Answer only the question, and do not offer to discuss it further. Remember: the only knowledge you have about the topic is what {{PLAYER}} taught you!
+
+**Important:** Your responses should be limited to spoken content only. Don't include any non-verbal elements such as actions, emotes, or descriptions. Keep your responses very short, clear, and conversational.
+
+## Teaching Conversation
+
+{{TEACHING_CONVERSATION}}`,
+
+	SYSTEM_ANSWER_DUH_ADDENDUM: `The user will be asking you a question about {{CONCEPT}} in the field of {{FIELD_OF_STUDY}}. You must answer the question using *only* the information in a conversation you had with {{PLAYER}}. However, {{PLAYER}} didn't talk with you and so you didn't learn anything! Since you can only use the information from the conversation, you won't be able to answer the question, so instead make a humorous and obviously incorrect effort for laughs. 
+
+**Important:** Your responses should be limited to spoken content only. Don't include any non-verbal elements such as actions, emotes, or descriptions. Keep your responses very short, clear, and conversational.`,
+
+	SYSTEM_PROFESSOR_GRADES: `You are Professor Noodle, an expert on {{CONCEPT}} in the field of {{FIELD_OF_STUDY}}. You have given a presentation on the concept of "{{CONCEPT}}" as part of a learning game called Noodle Knocker. You are now tasked with grading the user's answer to a question about {{CONCEPT}} based on how well the answer reflects the information in the Presentation Transcript below. Give the grade verbally along with the reason for why you chose that grade. Keep your answer very short and to the point.
+
+The grade you give should be an integer between 0 and 100 (higher is better). Answers that are largely incorrect or incomplete should receive a grade less than 25, and only good answers should receive a grade of 75 or higher. **Be sure to explain why you choose the grade you give.** 
+	
 {{DIFFICULTY_SNIPPET}}
 
----
+**Important:** Your response should be limited to spoken content only. Don't include any non-verbal elements such as actions, emotes, or descriptions.
 
-### Example Slide Structure and Narration:
+## Presentation Transcript
 
-**Slide 1: Title Slide**
-- Text Content: 
-  \`\`\`
-  # {{CONCEPT}}
-  ### An Introduction by Professor Noodle
-  \`\`\`
-- Narration: 
-  \`\`\`
-  "Hello, everyone! I'm Professor Noodle, and today we're going to explore the fascinating concept of {{CONCEPT}} within the field of {{FIELD_OF_STUDY}}. Let's dive in! Over the next few slides, we'll unravel the intricacies of this concept, examine its relevance, and discover its practical applications. By the end of this presentation, you'll have a solid understanding of {{CONCEPT}} and its significance."
-  \`\`\`
+{{PRESENTATION_TRANSCRIPT}}`,
 
-**Slide 2: Introduction to {{CONCEPT}}**
-- Text Content: 
-  \`\`\`
-  ## What is {{CONCEPT}}?
-  {{Brief description of the concept}}
-  \`\`\`
-- Narration: 
-  \`\`\`
-  "To start, let's understand what {{CONCEPT}} is. {{Provide a brief explanation of the concept}}. For instance, imagine how this concept plays out in real-world scenarios or everyday situations. It's crucial to grasp the basics because this foundation will help us explore the more complex aspects as we progress."
-  \`\`\`
+	PROFESSOR_GRADES: `Answer the following question and I will give you a grade between 0 and 100 along with an insightful reason for the grade: {{QUESTION}}`,
 
-**Slide 3-5: Detailed Explanation**
-- Text Content Example: 
-  \`\`\`
-  ## Key Aspects of {{CONCEPT}}
-  - Point 1: {{Explanation}}
-  - Point 2: {{Explanation}}
-  - Point 3: {{Explanation}}
-  \`\`\`
-- Narration Example: 
-  \`\`\`
-  "Now, let's look at some key aspects of {{CONCEPT}}. First, {{Explain Point 1}}. This aspect is particularly intriguing because it highlights {{provide detailed information, including anecdotes or interesting trivia}}. For example, did you know that {{relevant trivia}}?
+	EXTRACT_GRADE: `Based on the professor's response to a question's answer, extract or infer a grade between 0 and 100 (higher is better).\n**Professor's Response:** {{ANSWER}}`
 
-  Next, {{Explain Point 2}}. This point is crucial as it demonstrates {{detailed explanation with examples of utility or relevance}}. Consider how this aspect influences {{relevant field or practical application}}. An interesting case is {{provide an anecdote or example}}.
-
-  Lastly, {{Explain Point 3}}. This aspect ties everything together by {{detailed explanation and additional context}}. It’s fascinating to see how {{Point 3}} impacts the overall understanding of {{CONCEPT}}. A relevant example is {{provide detailed example or trivia}}."
-  \`\`\`
-
-**Slide 6: Conclusion**
-- Text Content: 
-  \`\`\`
-  ## Conclusion
-  ### Recap of {{CONCEPT}}
-  - Key Point 1
-  - Key Point 2
-  - Key Point 3
-  \`\`\`
-- Narration: 
-  \`\`\`
-  "To wrap up, let's recap what we've learned about {{CONCEPT}}. We've covered {{Key Point 1}}, delving into its core aspects and how it applies to {{FIELD_OF_STUDY}}. We also explored {{Key Point 2}}, providing a deeper understanding through examples and detailed explanations. Finally, we examined {{Key Point 3}}, connecting the dots and illustrating the broader implications of {{CONCEPT}}. Great job following along! Remember, the nuances and details we've discussed are what truly bring the concept to life."
-  \`\`\`
-
-### Example Test Questions:
-
-1. **Easy Question:** 
-   - **Question:** "What is the basic definition of {{CONCEPT}}?"
-
-2. **Moderate Question:**
-   - **Question:** "Name one key aspect of {{CONCEPT}} discussed in the presentation."
-
-3. **Moderate Question:**
-   - **Question:** "How does {{CONCEPT}} impact the field of {{FIELD_OF_STUDY}}?"
-
-4. **Difficult Question:**
-   - **Question:** "Describe the relationship between {{Point 1}} and {{Point 2}} within the context of {{CONCEPT}}."
-
-5. **Challenging Question:**
-   - **Question:** "Summarize the main points covered in the conclusion of the presentation."
-`
 }
 
 const Schema = {
@@ -142,7 +164,7 @@ const Schema = {
 					properties: {
 						textContent: {
 							type: 'string',
-							description: 'Markdown-formatted text content shown in the slide. Should be very brief and to the point, without any images or links.'
+							description: 'Markdown-formatted text content shown in the slide. Will typically be a header and 3 to 5 unnumbered bullet points.'
 						},
 						narration: {
 							type: 'string',
@@ -163,6 +185,17 @@ const Schema = {
 			}
 		},
 		required: ['slides', 'questions']
+	},
+	EXTRACT_GRADE: {
+		type: 'object',
+		description: 'The extracted grade between 0 and 100, with 100 being the highest grade',
+		properties: {
+			grade: {
+				type: 'number',
+				description: 'The extracted grade between 0 and 100, with 100 being the highest grade'
+			}
+		},
+		required: ['grade']
 	}
 }
 
@@ -171,24 +204,29 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	counter = 0;
 	difficulty = Difficulties.NORMAL;
 	playerCount = 1;
+	playerNames = [];
 	anthropic;
 	ws;
 	concept;
 	fieldOfStudy;
 	clientIP;
+	presentation;
 	transcript = '';
 	questions;
-	professorVoice = 'aura-athena-en';
-	playerVoices = [];
-	voiceWs = null;
+	professorVoice = PROFESSOR_VOICE;
+	playerData = [];
+	speakWs = null;
+	speakBuffer = '';
 	lastVoice;
+	transcribeWs = null;
+	qAndAMessages = [];
+	flushRequestedAt = 0;
 
 	async fetch(request) {
 		this.clientIP = request.headers.get('cf-connecting-ip');
 		if (!this.clientIP) {
 			this.clientIP = 'localhost';
 		}
-		console.log(this.clientIP);
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
 		this.ctx.acceptWebSocket(server);
@@ -211,137 +249,39 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		}))
 	}
 
-	escapeControlCharacters(str) {
-		return str.replace(/[\n\r\t\b\f\\"]/g, match => {
-			const escapeChars = {
-				'\n': '\\n',
-				'\r': '\\r',
-				'\t': '\\t',
-				'\b': '\\b',
-				'\f': '\\f',
-				'\\': '\\\\',
-				'"': '\\"'
-			};
-			return escapeChars[match];
-		});
-	}
-	
-	deepEscapeJSON(input) {
-		if (typeof input !== 'string') {
-			throw new Error('Input must be a JSON string');
-		}
-	
-		return input.replace(/"(?:[^\\"]|\\.)*"/g, match => {
-			// Parse the JSON string
-			let parsed;
-			try {
-				parsed = JSON.parse(match);
-			} catch (e) {
-				// If parsing fails, it's likely already escaped, so return as is
-				return match;
-			}
-	
-			// If it's a string, escape its content
-			if (typeof parsed === 'string') {
-				return JSON.stringify(this.escapeControlCharacters(parsed));
-			}
-	
-			// If it's not a string, return the original match
-			return match;
-		});
-	}
-
-	convertToolInput(response) {
-		console.log(response.content[0].input);
-		if (response.stop_reason === 'tool_use') {
-			for (let i = 0; i < response.content.length; i++) {
-				if (response.content[i].type === 'tool_use') {
-					const input = response.content[i].input;
-					if (typeof input === 'string') {
-						return this.deepEscapeJSON(input);
-					} else {
-						return input;
-					}
-				}
-			}
-		}
-		throw new Error('Failed to convert tool input');
-	}
-
-
 	async handleGenerateConcept() {
-		// todo: Handle 529 (overloaded) from Anthropic
-		const conceptFieldIndex = Math.floor(Math.random() * conceptFieldPairs.length);
+		this.playerData = [];
+		let availableMaleVoices = MALE_SPEAKER_VOICES.slice();
+		availableMaleVoices.sort(() => Math.random() - 0.5);
+		let availableFemaleVoices = FEMALE_SPEAKER_VOICES.slice();
+		availableFemaleVoices.sort(() => Math.random() - 0.5);
+		for (let i = 0; i < this.playerCount; i++) {
+			let gender;
+			let voice;
+			let name;
+			if (Math.random() > 0.5) {
+				gender = 'female';
+				name = femaleNames[Math.floor(Math.random() * femaleNames.length)];
+				voice = availableFemaleVoices.pop();
+			} else {
+				gender = 'male';
+				name = maleNames[Math.floor(Math.random() * maleNames.length)];
+				voice = availableMaleVoices.pop();
+			}
+			this.playerData.push({
+				name: name,
+				voice: voice,
+				gender: gender,
+				score: 0,
+				answers: [],
+				conversation: [],
+				hexColor: Array.from({length: 3}, () => Math.floor(Math.random() * (256 - 120) + 120).toString(16).padStart(2, '0')).join(''),
+				description: contestants[Math.floor(Math.random() * Object.keys(contestants).length)].replace(/{{NAME}}/g, name)
+			});
+		}
+		let conceptFieldIndex = Math.floor(Math.random() * conceptFieldPairs.length);
 		this.fieldOfStudy = conceptFieldPairs[conceptFieldIndex][0];
 		this.concept = conceptFieldPairs[conceptFieldIndex][1];
-		console.log(this.concept, this.fieldOfStudy);
-		let prompt = Prompts.CREATE_TRIVIA
-			.replace(/{{CONCEPT}}/g, this.concept)
-			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy);
-		let response = await this.anthropic.messages.create({
-			model: this.env.ANTHROPIC_MODEL,
-			max_tokens: 1024,
-			messages: [{
-				role: 'user',
-				content: prompt
-			}],
-			tools: [{
-				name: 'create_trivia',
-				description: 'Create 2 to 5 short humorous trivia sentences related to the concept, ' + this.concept,
-				input_schema: Schema.CREATE_TRIVIA
-			}],
-			tool_choice: { type: 'tool', name: 'create_trivia' },
-		});
-		console.log(response);
-		this.sendCmd(Commands.GENERATE_STARTED, {
-			concept: this.concept,
-			fieldOfStudy: this.fieldOfStudy,
-			trivia: this.convertToolInput(response).trivia
-		});
-
-		let difficultSnippet = '**Important:** The presentation should be clear and understandable, targeting relatively uneducated adults new to the material. Ensure that the test questions are appropriate for this audience, ranging from easy to moderately challenging.';
-		if (this.difficulty === Difficulties.EASY) {
-			difficultSnippet = '**Important:** The presentation should be simple and very easy to understand, suitable for middle-school students new to the material. Ensure that the test questions are appropriate for this audience and are not particularly challenging.';
-		} else if (this.difficulty === Difficulties.HARD) {
-			difficultSnippet = '**Important:** The presentation should be advanced, fast-paced, and presume a highly intelligent and engaged audience. Ensure that the test questions are challenging, requiring the audience to pay very careful attention and reason logically about the material, but do not require any specialized knowledge outside of the presentation.';
-		}
-		prompt = Prompts.GENERATE_PRESENTATION
-			.replace(/{{CONCEPT}}/g, this.concept)
-			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
-			.replace(/{{DIFFICULTY_SNIPPET}}/g, difficultSnippet);
-		response = await this.anthropic.messages.create({
-			model: this.env.ANTHROPIC_MODEL,
-			max_tokens: 4096,
-			system: 'You are Professor Noodle, an excellent communicator and presenter who is an expert on ' + this.concept + ' in the field of ' + this.fieldOfStudy + '.',
-			messages: [{
-				role: 'user',
-				content: prompt
-			}],
-			tools: [{
-				name: 'generate_presentation',
-				description: 'Create a 6-slide presentation with 5 test questions on the concept, ' + this.concept,
-				input_schema: Schema.GENERATE_PRESENTATION
-			}],
-			tool_choice: { type: 'tool', name: 'generate_presentation' },
-		});
-		let presentation = this.convertToolInput(response);
-		// print what presentation is instanceof
-		console.log('Class of presentation:', typeof presentation);
-		if (typeof presentation.slides === 'string') {
-			console.log('Was string!')
-			presentation.slides = JSON.parse(presentation.slides);
-			console.log('Presentation:', presentation);
-		}
-		if (typeof presentation.questions === 'string') {
-			presentation.questions = JSON.parse(presentation.questions);
-		}
-
-		this.transcript = '';
-		presentation.slides.forEach(slide => {
-			this.transcript += slide.narration + '\n';
-		});
-
-		console.log(JSON.stringify(presentation.slides));
 
 		const artStyle = [
 			"Cartoon",
@@ -357,17 +297,121 @@ export class NoodleKnockerDurableObject extends DurableObject {
 			"Manga",
 			"Cyberpunk"
 		][Math.floor(Math.random() * 12)];
-
-		prompt = `{{this.concept}}, {{this.fieldOfStudy}}`;
-		;
-
-		response = await this.env.AI.run(
+		let prompt = `(${this.concept}), ${this.fieldOfStudy}, in a ${artStyle} style`;
+		let imagePromise = await this.env.AI.run(
 			"@cf/bytedance/stable-diffusion-xl-lightning",
 			{
 				prompt: prompt
 			}
 		);
 
+		prompt = Prompts.CREATE_TRIVIA
+			.replace(/{{CONCEPT}}/g, this.concept)
+			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy);
+		let response;
+		let attempts = 0;
+		let validator = new Validator(Schema.CREATE_TRIVIA);
+		while (attempts < 5) {
+			try {
+				response = await this.anthropic.messages.create({
+					model: this.env.ANTHROPIC_MODEL,
+					max_tokens: 1024,
+					messages: [{
+						role: 'user',
+						content: prompt
+					}],
+					tools: [{
+						name: 'create_trivia',
+						description: 'Create 2 to 5 short humorous trivia sentences related to the concept, ' + this.concept,
+						input_schema: Schema.CREATE_TRIVIA
+					}],
+					tool_choice: { type: 'tool', name: 'create_trivia' },
+				});
+				if (typeof response.content[0].input === 'string') {
+					response.content[0].input = JSON.parse(response.content[0].input);
+				}
+				if (validator.validate(response.content[0].input).valid) {
+					break;
+				} else {
+					console.error(validator.validate(response.content[0].input).errors);
+					attempts++;
+				}
+			} catch (e) {
+				console.error(e);
+				attempts++;
+			}
+			await new Promise(resolve => setTimeout(resolve, 2000 * attempts));  // mitigate 529 errors (overloads), etc
+		}
+		if (attempts === 5) {
+			console.error('Failed to generate trivia');
+			throw new Error('Failed to generate trivia');
+		}
+		console.log(response);
+		this.sendCmd(Commands.GENERATE_STARTED, {
+			concept: this.concept,
+			fieldOfStudy: this.fieldOfStudy,
+			trivia: response.content[0].input.trivia
+		});
+
+		let difficultySnippet = '**Important:** The presentation should be clear and understandable, targeting relatively uneducated adults new to the material. Ensure that the test questions are appropriate for this audience, ranging from easy to moderately challenging.';
+		if (this.difficulty === Difficulties.EASY) {
+			difficultySnippet = '**Important:** The presentation should be simple and very easy to understand, suitable for middle-school students new to the material. Ensure that the test questions are appropriate for this audience and are not particularly challenging.';
+		} else if (this.difficulty === Difficulties.HARD) {
+			difficultySnippet = '**Important:** The presentation should be advanced, fast-paced, and presume a highly intelligent and engaged audience. Ensure that the test questions are challenging, requiring the audience to pay very careful attention and reason logically about the material, but do not require any specialized knowledge outside of the presentation.';
+		}
+		prompt = Prompts.GENERATE_PRESENTATION
+			.replace(/{{CONCEPT}}/g, this.concept)
+			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
+			.replace(/{{DIFFICULTY_SNIPPET}}/g, difficultySnippet);
+		attempts = 0;
+		validator = new Validator(Schema.GENERATE_PRESENTATION);
+		while (attempts < 3) {
+			try {
+				response = await this.anthropic.messages.create({
+					model: this.env.ANTHROPIC_MODEL,
+					max_tokens: 4096,
+					system: Prompts.SYSTEM_GENERATE_PRESENTATION
+						.replace(/{{CONCEPT}}/g, this.concept)
+						.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy),
+					messages: [{
+						role: 'user',
+						content: prompt
+					}],
+					tools: [{
+						name: 'generate_presentation',
+						description: 'Create a 6-slide presentation with 5 test questions on the concept, ' + this.concept,
+						input_schema: Schema.GENERATE_PRESENTATION
+					}],
+					tool_choice: { type: 'tool', name: 'generate_presentation' },
+				});
+				if (typeof response.content[0].input === 'string') {
+					response.content[0].input = JSON.parse(response.content[0].input);
+				}
+				if (validator.validate(response.content[0].input).valid) {
+					break;
+				} else {
+					console.error(validator.validate(response.content[0].input).errors);
+					attempts++;
+				}
+			} catch (e) {
+				console.error(e);
+				attempts++;
+			}
+			await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+		}
+		if (attempts === 3) {
+			console.error('Failed to generate presentation');
+			throw new Error('Failed to generate presentation');
+		}
+		console.log(response);
+		this.presentation = response.content[0].input;
+
+		this.transcript = '';
+		this.presentation.slides.forEach(slide => {
+			this.transcript += slide.narration + '\n';
+		});
+
+		response = await imagePromise;
 		let reader = await response.getReader();
 		const chunks = [];
 		let done, value;
@@ -379,7 +423,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		}
 
 		function uint8ToBase64(uint8Array) {
-			const CHUNK_SIZE = 0x8000; // arbitrary number to prevent stack overflow
+			const CHUNK_SIZE = 0x8000;
 			let base64 = '';
 			for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
 				const chunk = uint8Array.subarray(i, i + CHUNK_SIZE);
@@ -397,132 +441,520 @@ export class NoodleKnockerDurableObject extends DurableObject {
 
 		const base64Image = 'data:image/png;base64,' + uint8ToBase64(combinedChunks);
 
-		response = await fetch(`https://api.deepgram.com/v1/projects/${this.env.DEEPGRAM_PROJECT_ID}/keys`, {
-			method: 'POST',
-			headers: {
-				'Authorization': 'Token ' + this.env.DEEPGRAM_API_KEY,
-				'Content-Type': 'application/json',
-				'Accept': 'application/json'
-			},
-			body: JSON.stringify({
-				comment: 'Temporary key for Noodle Knocker from ' + this.clientIP,
-				scopes: [
-					'usage:write'
-				],
-				time_to_live_in_seconds: 3600
-			})
-		}
-		);
-		console.log(response);
-
-		const audioKey = (await response.json()).key;
-		console.log(audioKey);
+		const playerDataWithoutVoice = this.playerData.map(player => {
+			const { voice, ...rest } = player;
+			return rest;
+		});
+		
 		this.sendCmd(Commands.GENERATE_DONE, {
-			presentation: presentation,
-			audioKey: audioKey,
-			audioEndpoint: this.env.DEEPGRAM_WS_ENDPOINT,
-			gameInfo: {
-				// next
-			},
+			presentation: this.presentation,
+			playerData: playerDataWithoutVoice,
 			base64Image: base64Image
 		});
 	}
 
-	async speak(text, speaker) {
-		let newVoice;
-		if (speaker === 'professor') {
-			newVoice = this.professorVoice;
-		} else if (speaker === 'player 1') {
-			newVoice = this.playerVoices[0];
-		} else if (speaker === 'player 2') {
-			newVoice = this.playerVoices[1];
-		} else if (speaker === 'player 3') {
-			newVoice = this.playerVoices[2];
-		} else if (speaker === 'player 4') {
-			newVoice = this.playerVoices[3];
+	splitFirstSentence(text) {
+		const match = text.match(/(.*?[\.\?\!])(.*)/);
+		const firstSentence = match ? match[1].trim() : '';
+		const remainder = match ? match[2].trim() : text.trim();
+		return [firstSentence, remainder];
+	}
+
+	async handleAskQuestion(question) {
+		this.qAndAMessages.push({ role: 'user', content: question });
+		let answerBuffer = '';
+		const stream = this.anthropic.messages.stream({
+			model: this.env.ANTHROPIC_MODEL,
+			max_tokens: 1024,
+			system: Prompts.SYSTEM_ASK_QUESTION
+				.replace(/{{CONCEPT}}/g, this.concept)
+				.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
+				.replace(/{{PRESENTATION_TRANSCRIPT}}/g, this.transcript),
+			messages: this.qAndAMessages
+		}).on('text', (text) => {
+			answerBuffer += text;
+			const [firstSentence, remainder] = this.splitFirstSentence(answerBuffer);
+			if (firstSentence.trim()) {
+				this.speak(firstSentence, Speakers.PROFESSOR);
+				this.sendCmd(Commands.ASK_QUESTION_ANSWER_PART, {
+					text: firstSentence
+				});
+				answerBuffer = remainder;
+			}
+		}).on('finalMessage', (message) => {
+			try {
+				if (answerBuffer.trim()) {
+					this.speak(answerBuffer, Speakers.PROFESSOR);
+					this.sendCmd(Commands.ASK_QUESTION_ANSWER_PART, {
+						text: answerBuffer
+					});
+				}
+				this.qAndAMessages.push({ role: 'assistant', content: message.content[0].text });
+				this.finishSpeaking();
+				this.sendCmd(Commands.ASK_QUESTION_FINISHED, {});
+			} catch (e) {
+				console.error(e);
+			}
+		});
+	}
+
+	async handleTeachContestant(playerIndex, text) {
+		let speaker = Speakers.PLAYER1;
+		if (playerIndex === 0) {
+			speaker = Speakers.PLAYER1;
+		} else if (playerIndex === 1) {
+			speaker = Speakers.PLAYER2;
+		} else if (playerIndex === 2) {
+			speaker = Speakers.PLAYER3;
+		} else if (playerIndex === 3) {
+			speaker = Speakers.PLAYER4;
 		}
-		if (newVoice !== this.lastVoice) {
-			if (this.voiceWs !== null) {
-				this.voiceWs.close();
+		this.playerData[playerIndex].conversation.push({ role: 'user', content: text });
+		let answerBuffer = '';
+		const prompt = this.playerData[playerIndex].description + '\n\n' + Prompts.SYSTEM_TEACH_ADDENDUM
+			.replace(/{{CONCEPT}}/g, this.concept)
+			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy);
+		
+		const stream = this.anthropic.messages.stream({
+			model: this.env.ANTHROPIC_MODEL,
+			max_tokens: 1024,
+			system: prompt,
+			messages: this.playerData[playerIndex].conversation
+		}).on('text', (text) => {
+			answerBuffer += text;
+			const [firstSentence, remainder] = this.splitFirstSentence(answerBuffer);
+			if (firstSentence.trim()) {
+				this.speak(firstSentence, speaker);
+				this.sendCmd(Commands.TEACH_CONTESTANT_ANSWER_PART, {
+					speaker: speaker,
+					text: firstSentence
+				});
+				answerBuffer = remainder;
+			}
+		}).on('finalMessage', (message) => {
+			try {
+				if (answerBuffer.trim()) {
+					this.speak(answerBuffer, speaker);
+					this.sendCmd(Commands.TEACH_CONTESTANT_ANSWER_PART, {
+						speaker: speaker,
+						text: answerBuffer
+					});
+				}
+				this.playerData[playerIndex].conversation.push({ role: 'assistant', content: message.content[0].text });
+				this.finishSpeaking();
+				this.sendCmd(Commands.TEACH_CONTESTANT_FINISHED, {});
+			} catch (e) {
+				console.error(e);
+			}
+		}).on('error', (e) => {
+			console.error(e);
+		});
+	}
+
+	async handleContestantAnswers(playerIndex, questionIndex) {
+		let speaker = Speakers.PLAYER1;
+		if (playerIndex === 0) {
+			speaker = Speakers.PLAYER1;
+		} else if (playerIndex === 1) {
+			speaker = Speakers.PLAYER2;
+		} else if (playerIndex === 2) {
+			speaker = Speakers.PLAYER3;
+		} else if (playerIndex === 3) {
+			speaker = Speakers.PLAYER4;
+		}
+		try {
+		let answerBuffer = '';
+		const rawConversation = this.playerData[playerIndex].conversation;
+		let prompt;
+		if (rawConversation.length > 2) {
+			let teachingConversation = '';
+			for (let i = 1; i < rawConversation.length; i++) {
+				if (i % 2 === 1) {
+					teachingConversation += `**You:** ${rawConversation[i].content}\n\n`;
+				} else {
+					teachingConversation += `**${this.playerNames[playerIndex]}:** ${rawConversation[i].content}\n\n`;
+				}
+			}
+			console.log(teachingConversation);
+			prompt = this.playerData[playerIndex].description + '\n\n' + Prompts.SYSTEM_ANSWER_ADDENDUM
+			.replace(/{{CONCEPT}}/g, this.concept)
+			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
+			.replace(/{{PLAYER}}/g, this.playerNames[playerIndex])
+			.replace(/{{TEACHING_CONVERSATION}}/g, teachingConversation);
+		} else {
+			prompt = this.playerData[playerIndex].description + '\n\n' + Prompts.SYSTEM_ANSWER_DUH_ADDENDUM
+			.replace(/{{CONCEPT}}/g, this.concept)
+			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
+			.replace(/{{PLAYER}}/g, this.playerNames[playerIndex])
+		}
+		
+		const stream = this.anthropic.messages.stream({
+			model: this.env.ANTHROPIC_MODEL,
+			max_tokens: 512,
+			system: prompt,
+			messages: [{
+				role: 'user',
+				content: this.presentation.questions[questionIndex]
+			}]
+		}).on('text', (text) => {
+			answerBuffer += text;
+			const [firstSentence, remainder] = this.splitFirstSentence(answerBuffer);
+			if (firstSentence.trim()) {
+				this.speak(firstSentence, speaker);
+				this.sendCmd(Commands.CONTESTANT_QUIZ_ANSWER_PART, {
+					speaker: speaker,
+					text: firstSentence
+				});
+				answerBuffer = remainder;
+			}
+		}).on('finalMessage', (message) => {
+			try {
+				if (answerBuffer.trim()) {
+					this.speak(answerBuffer, speaker);
+					this.sendCmd(Commands.CONTESTANT_QUIZ_ANSWER_PART, {
+						speaker: speaker,
+						text: answerBuffer
+					});
+				}
+				this.playerData[playerIndex].answers.push(message.content[0].text);
+				this.finishSpeaking();
+				this.sendCmd(Commands.CONTESTANT_QUIZ_FINISHED, {});
+			} catch (e) {
+				console.error(e);
+			}
+		}).on('error', (e) => {
+			console.error(e);
+		});
+		} catch (e) {
+			console.error(e);
+		}
+	}
+
+	async handleProfessorGrades(playerIndex, questionIndex) {
+		console.log('grading...');
+		try {
+		let answerBuffer = '';
+		let difficultySnippet = 'The grade you give should be generous and lenient, as the user is a beginner in their studies. Be encouraging and positive in your reason for the grade.';
+		if (this.difficulty === Difficulties.EASY) {
+			difficultySnippet = 'The grade you give should be fair, with a thoughtful reason. The user is a lay person and should only be graded based on the information in the Presentation Transcript not on any additional knowledge you did not discuss in the presentation.';
+		} else if (this.difficulty === Difficulties.HARD) {
+			difficultySnippet = 'The grade you give should strictly be based on the information in the Presentation Transcript. Be fair and provide a thoughtful reason. Penalize incorrect or incomplete answers, but allow for the fact that the user was only allowed to provide a very short answer. If the user did poorly, you may humorously call out their mistakes, but do not engage in any ad hominem insults or rude behavior.';
+		}
+		let prompt = Prompts.SYSTEM_PROFESSOR_GRADES
+			.replace(/{{CONCEPT}}/g, this.concept)
+			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
+			.replace(/{{DIFFICULTY_SNIPPET}}/g, difficultySnippet)
+			.replace(/{{PRESENTATION_TRANSCRIPT}}/g, this.transcript);
+		console.log('here?');
+		const stream = this.anthropic.messages.stream({
+			model: this.env.ANTHROPIC_MODEL,
+			max_tokens: 512,
+			system: prompt,
+			messages: [{
+				role: 'user',
+				content: 'I am ready to be graded from 0 to 100 based on understanding the Presentation Transcript.'
+			},
+			{
+				role: 'assistant',
+				content: 'Your question is: ' + this.presentation.questions[questionIndex]
+			},
+			{
+				role: 'user',
+				content: this.playerData[playerIndex].answers[questionIndex]
+			},]
+		}).on('text', (text) => {
+			answerBuffer += text;
+			const [firstSentence, remainder] = this.splitFirstSentence(answerBuffer);
+			if (firstSentence.trim()) {
+				this.speak(firstSentence, Speakers.PROFESSOR);
+				this.sendCmd(Commands.PROFESSOR_QUIZ_ANSWER_PART, {
+					speaker: Speakers.PROFESSOR,
+					text: firstSentence
+				});
+				answerBuffer = remainder;
+			}
+		}).on('finalMessage', async (message) => {
+			try {
+				if (answerBuffer.trim()) {
+					this.speak(answerBuffer, Speakers.PROFESSOR);
+					this.sendCmd(Commands.PROFESSOR_QUIZ_ANSWER_PART, {
+						speaker: Speakers.PROFESSOR,
+						text: answerBuffer
+					});
+				}
+				const answer = message.content[0].text;
+				let grade = 0;
+				const match = answer.match(/\b(100|\d{1,2})\b/)
+				if (match) {
+					grade = parseInt(match[0]);
+				} else {
+					let validator = new Validator(Schema.EXTRACT_GRADE);
+					prompt = Prompts.EXTRACT_GRADE
+						.replace(/{{ANSWER}}/g, answer);
+					response = await this.anthropic.messages.create({
+						model: this.env.ANTHROPIC_MODEL,
+						max_tokens: 64,
+						messages: [{
+							role: 'user',
+							content: prompt
+						}],
+						tools: [{
+							name: 'extract_grade',
+							description: 'Extracts or infers a grade between 0 and 100',
+							input_schema: Schema.EXTRACT_GRADE
+						}],
+						tool_choice: { type: 'tool', name: 'extract_grade' },
+					});
+					if (typeof response.content[0].input === 'string') {
+						response.content[0].input = JSON.parse(response.content[0].input);
+					}
+					if (validator.validate(response.content[0].input).valid) {
+						grade = response.content[0].input.grade;
+					} else {
+						grade = 0;
+					}
+				}
+				console.log('Grade:', grade, 'Answer:', answer);
+				this.playerData[playerIndex].score += grade;
+				this.finishSpeaking();
+				this.sendCmd(Commands.PROFESSOR_QUIZ_FINISHED, {
+					grade: grade,
+					playerIndex: playerIndex
+				});
+			} catch (e) {
+				console.error(e);
+			}
+		}).on('error', (e) => {
+			console.error(e);
+		});
+		} catch (e) {
+			console.error(e);
+		}
+	}
+
+	getVoice(speaker) {
+		console.log('Voice:', speaker);
+		if (speaker === Speakers.PROFESSOR) {
+			return this.professorVoice;
+		} else if (speaker === Speakers.PLAYER1) {
+			return  this.playerData[0].voice;
+		} else if (speaker === Speakers.PLAYER2) {
+			return  this.playerData[1].voice;
+		} else if (speaker === Speakers.PLAYER3) {
+			return  this.playerData[2].voice;
+		} else if (speaker === Speakers.PLAYER4) {
+			return this.playerData[3].voice;
+		} else {
+			return this.professorVoice;
+		}
+	}
+
+	async speak(text, speaker, isOneShot = false) {
+		if (text.length === 0) {
+			return;
+		}
+		let newVoice = this.getVoice(speaker);
+
+		if (newVoice !== this.lastVoice || this.speakWs === null) {
+			this.speakBuffer = text;
+			if (this.speakWs !== null) {
+				this.speakWs.close();
 			}
 			this.lastVoice = newVoice;
 			try {
-				this.voiceWs = new w3cwebsocket(this.env.DEEPGRAM_WS_ENDPOINT + `?model=${newVoice}&encoding=mp3`,["token", this.env.DEEPGRAM_API_KEY]);
-				
-				console.log(this.voiceWs);
-
+				this.speakWs = new w3cwebsocket(this.env.DEEPGRAM_SPEAK_ENDPOINT + `?model=${newVoice}&encoding=mp3`,["token", this.env.DEEPGRAM_API_KEY]);
 				const target = this;
-
-				this.voiceWs.onopen = function (event) {
-					console.log("Opening...");
-					
+				this.speakWs.onopen = function (event) {
+					console.log('Opening...');
 				};
-				this.voiceWs.onmessage = function (event) {
-					console.log("Message...");
+				this.speakWs.onmessage = function (event) {
 					if (typeof event.data !== 'string') {
-						console.log("Maybe MP3...");
-						target.ws.send(event.data);						
+						if (event.data.byteLength > 0) {
+							target.ws.send(event.data);						
+						}
 					} else {
 						const jsonData = JSON.parse(event.data);
 						if (jsonData.type === 'Metadata') {
-							target.voiceWs.send(JSON.stringify({
+							console.log("Speaking at " + Date.now() + ' ' + target.speakBuffer);
+							// remove emotes from speech -- rarely necessary with sonnet 3.5+
+							let text = target.speakBuffer.replace(/\*([^*\s][^*]*?\s[^*]*?)\*/g, '');
+							target.speakWs.send(JSON.stringify({
 								type: 'Speak',
-								text: text,
+								text: text
 							}));
-							target.voiceWs.send(JSON.stringify({
-								type: 'Flush'
-							}));
+							if (isOneShot) {
+								target.speakWs.send(JSON.stringify({
+									type: 'Flush'
+								}));									
+							}
+							target.speakBuffer = '';
+						} else if (jsonData.type === 'Flushed') {
+							target.flushRequestedAt = 0;
+							target.sendCmd(Commands.DONE_SPEAKING, {});
 						}
 					}
 				};
-				this.voiceWs.onerror = function (event) {
+				this.speakWs.onerror = function (event) {
 					console.log(event);
 				};
-				this.voiceWs.onclose = function (event) {
+				this.speakWs.onclose = function (event) {
 					console.log(event);
 				}
 			} catch (err) {
 				console.error(err);
 			}
 		} else {
-			this.voiceWs.send(JSON.stringify({
-				type: 'Speak',
-				text: text,
-			}));
-			this.voiceWs.send(JSON.stringify({
-				type: 'Flush'
-			}));
+			if (this.speakWs !== null && this.speakWs.readyState === WebSocket.OPEN) {
+				console.log("More speaking at " + Date.now() + ' ' + text);
+				this.speakWs.send(JSON.stringify({
+					type: 'Speak',
+					text: text.replace(/\*([^*\s][^*]*?\s[^*]*?)\*/g, '')
+				}));
+				if (isOneShot) {
+					this.speakWs.send(JSON.stringify({
+						type: 'Flush'
+					}));				
+				}
+			} else {
+				this.speakBuffer += text;
+			}	
 		}
 	}
 
-
-	async webSocketMessage(ws, message) {
-		console.log("Message", message);
-		try {
-			var jsonData = JSON.parse(message);
-			console.log(jsonData.cmd);
-			if (jsonData.cmd === Commands.GENERATE) {
-				this.difficulty = jsonData.difficulty;
-				this.playerCount = jsonData.playerCount;
-				await this.handleGenerateConcept();
-			} else if (jsonData.cmd === Commands.TTS) {
-				this.speak(jsonData.text, jsonData.speaker);
-			} else if (data.event === "close") {
-				if (this.voiceWs !== null) {
-					this.voiceWs.close();
-					this.voiceWs = null;
+	finishSpeaking() {
+		console.log('SHOULD FLUSH');
+		function checkFlush() {
+			const delta = Date.now() - this.flushRequestedAt;
+			console.log('here...', delta);
+			if (delta > 300 && delta < 700) {
+				this.sendCmd(Commands.DONE_SPEAKING, {});
+				this.flushRequestedAt = 0;
+			}
+		};
+		if (this.speakWs !== null && this.speakWs.readyState === WebSocket.OPEN) {
+			this.flushRequestedAt = Date.now();
+			setTimeout(checkFlush, 500);
+			this.speakWs.send(JSON.stringify({
+				type: 'Flush'
+			}));
+		} else {
+			setTimeout(() => {
+				if (this.speakWs !== null && this.speakWs.readyState === WebSocket.OPEN) {
+					this.flushRequestedAt = Date.now();
+					setTimeout(checkFlush, 500);
+					this.speakWs.send(JSON.stringify({
+						type: 'Flush'
+					}));						
+				} else {
+					console.error('speakWs is null or not open');
 				}
-				ws.close();
+			}, 250);
+		}
+	}
+
+	startTranscribing(sampleRate) {
+		if (this.transcribeWs !== null) {
+			this.transcribeWs.close();
+			this.transcribeWs = null;
+		}
+		try {
+			this.transcribeWs = new w3cwebsocket(this.env.DEEPGRAM_TRANSCRIBE_ENDPOINT + `?encoding=linear16&sample_rate=${sampleRate}&smart_format=true`,["token", this.env.DEEPGRAM_API_KEY]);
+			const target = this;
+			this.transcribeWs.onopen = function (event) {
+				console.log('opening...');
+			};
+			this.transcribeWs.onmessage = function (event) {
+				const jsonData = JSON.parse(event.data);
+				console.log(jsonData);
+				if (jsonData.type === 'Results') {
+					const text = jsonData.channel.alternatives[0].transcript;
+					if (text.length > 0) {
+						target.sendCmd(Commands.TRANSCRIBED, {
+							text: text
+						});							
+					}
+				}
+			};
+			this.transcribeWs.onerror = function (event) {
+				console.log(event);
+			};
+			this.transcribeWs.onclose = function (event) {
+				console.log('Closing...');
+				target.sendCmd(Commands.TRANSCRIBE_DONE, {});
+				this.transcribeWs = null;
 			}
 		} catch (err) {
 			console.error(err);
 		}
 	}
 
+	stopTranscribing() {
+		if (this.transcribeWs !== null) {
+			this.transcribeWs.send(JSON.stringify({
+				type: 'CloseStream'
+			}));
+		}		
+	}
+
+
+	async webSocketMessage(ws, message) {
+		if (typeof message !== 'string') {
+			if (this.transcribeWs !== null && this.transcribeWs.readyState === WebSocket.OPEN) {
+				this.transcribeWs.send(message);
+			}
+		} else {
+			console.log("Message", message);
+			try {
+				var jsonData = JSON.parse(message);
+				console.log(jsonData.cmd);
+				if (jsonData.cmd === Commands.GENERATE) {
+					this.difficulty = jsonData.difficulty;
+					this.playerCount = jsonData.playerCount;
+					this.playerNames = jsonData.playerNames;
+					await this.handleGenerateConcept();
+				} else if (jsonData.cmd === Commands.TTS) {
+					this.speak(jsonData.text, jsonData.speaker, true);
+				} else if (jsonData.cmd === Commands.STOP_GENERATING_SPEECH) {
+					if (this.speakWs) {
+						//this.voiceWs.close();
+						//this.voiceWs = null;
+						this.speakWs.send(JSON.stringify({
+							type: 'Reset'
+						}));
+					}
+				} else if (jsonData.cmd === Commands.START_TRANSCRIBING) {
+					this.startTranscribing(jsonData.sampleRate);
+				} else if (jsonData.cmd === Commands.STOP_TRANSCRIBING) {
+					this.stopTranscribing();
+				} else if (jsonData.cmd === Commands.ASK_QUESTION) {
+					this.handleAskQuestion(jsonData.text);
+				} else if (jsonData.cmd === Commands.TEACH_CONTESTANT) {
+					this.handleTeachContestant(jsonData.playerIndex, jsonData.text);
+				} else if (jsonData.cmd === Commands.CONTESTANT_QUIZ) {
+					this.handleContestantAnswers(jsonData.playerIndex, jsonData.questionIndex);
+				} else if (jsonData.cmd === Commands.PROFESSOR_QUIZ) {
+					this.handleProfessorGrades(jsonData.playerIndex, jsonData.questionIndex);
+				} else if (data.event === "close") {
+					if (this.speakWs !== null) {
+						this.speakWs.close();
+						this.speakWs = null;
+					}
+					ws.close();
+				}
+			} catch (err) {
+				console.error(err);
+			}
+		}
+	}
+
 	async webSocketClose(ws, code, reason, wasClean) {
-		if (this.voiceWs !== null) {
-			this.voiceWs.close();
-			this.voiceWs = null;
+		if (this.speakWs !== null) {
+			this.speakWs.close();
+			this.speakWs = null;
+		}
+		if (this.transcribeWs !== null) {
+			this.transcribeWs.close();
+			this.transcribeWs = null;
 		}
 		ws.close(1000, "Closing WebSocket");
 	}
@@ -534,9 +966,9 @@ export default {
 	async fetch(request, env, ctx) {
 		try {
 			const url = new URL(request.url);
-			if (url.pathname === "/") {
+			if (url.pathname === '/') {
 				return new Response(homeHtml, { headers: { 'content-type': 'text/html' } });
-			} else if (url.pathname == "/ws") {
+			} else if (url.pathname === '/ws') {
 				const upgradeHeader = request.headers.get('Upgrade');
 				if (!upgradeHeader || upgradeHeader !== 'websocket') {
 					return new Response('Expected Upgrade: websocket', { status: 426 });
@@ -544,8 +976,12 @@ export default {
 				const id = env.NOODLE_KNOCKER_DURABLE_OBJECT.newUniqueId();
 				const stub = env.NOODLE_KNOCKER_DURABLE_OBJECT.get(id);
 				return stub.fetch(request);
+			} else if (url.pathname === '/waiting-loop.mp3') {
+				return new Response(Buffer.from(waitingLoopMp3, 'base64'), { headers: { 'content-type': 'audio/mpeg' } });
+			} else if (url.pathname === '/silent.mp3') {
+				return new Response(Buffer.from(silent5SecMp3, 'base64'), { headers: { 'content-type': 'audio/mpeg' } });
 			} else {
-				return new Response("Not found.", {
+				return new Response('Not found.', {
 					status: 404,
 					headers: { 'content-type': 'text/plain' }
 				});
