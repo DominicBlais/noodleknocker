@@ -10,7 +10,7 @@ import { Validator } from '@cfworker/json-schema';
 import homeHtml from "./html/index.html";
 import conceptFieldPairs from "./concept_field_pairs";
 import { contestants, maleNames, femaleNames } from "./contestants";
-import { waitingLoopMp3, silent5SecMp3 } from "./encoded_statics";
+import { waitingLoopMp3, silent5SecMp3, fanfareMp3 } from "./encoded_statics";
 
 const Commands = {
 	GENERATE: 'generate',
@@ -975,6 +975,8 @@ export default {
 				return new Response(Buffer.from(waitingLoopMp3, 'base64'), { headers: { 'content-type': 'audio/mpeg' } });
 			} else if (url.pathname === '/silent.mp3') {
 				return new Response(Buffer.from(silent5SecMp3, 'base64'), { headers: { 'content-type': 'audio/mpeg' } });
+			} else if (url.pathname === '/fanfare.mp3') {
+				return new Response(Buffer.from(fanfareMp3, 'base64'), { headers: { 'content-type': 'audio/mpeg' } });
 			} else {
 				return new Response('Not found.', {
 					status: 404,

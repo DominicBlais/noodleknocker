@@ -988,25 +988,31 @@
             }
             document.getElementById('scoreboard').innerHTML = scoreboardHtml;
 
-            function shoot() {
-                confetti({
-                    ...defaults,
-                    particleCount: 40,
-                    scalar: 1.2,
-                    shapes: ['star']
-                });
-
-                confetti({
-                    ...defaults,
-                    particleCount: 10,
-                    scalar: 0.75,
-                    shapes: ['circle']
-                });
-            }
-
-            setTimeout(shoot, 0);
-            setTimeout(shoot, 100);
-            setTimeout(shoot, 200);
+            const fanfareMusic = new Audio('/fanfare.mp3');
+            fanfareMusic.addEventListener('loadeddata', function() {
+                fanfareMusic.play();
+                function shoot() {
+                    confetti({
+                        ...defaults,
+                        particleCount: 40,
+                        scalar: 1.2,
+                        shapes: ['star']
+                    });
+    
+                    confetti({
+                        ...defaults,
+                        particleCount: 10,
+                        scalar: 0.75,
+                        shapes: ['circle']
+                    });
+                }
+    
+                setTimeout(shoot, 500);
+                setTimeout(shoot, 600);
+                setTimeout(shoot, 700);
+            });
+            fanfareMusic.load();
+    
         }
 
         async function startGame() {
@@ -1270,10 +1276,6 @@
                         playerData = jsonData.playerData;
                         document.getElementById('waiting-to-start-game-modal').classList.remove('is-active');
 
-                        showPage('quiz');
-                        return;
-
-                        // XXX
                         showPage('study');
                         showSlide(0);
                         document.getElementById('slide-image').innerHTML = `<img src="${jsonData.base64Image}"/>`;
@@ -1381,19 +1383,6 @@
                 alert('Sorry, but Safari is not currently supported. Please use a different browser like Chrome, Firefox, or Edge.')
             }
 
-
-            setTimeout(() => {
-                showPage('results');
-
-
-                //tts('This is a basic text-to-speech test.', Speakers.PROFESSOR);    
-            }, 300);
-
-            playerCount = 4;
-
-            playerData = [{ "name": "Harmony", "gender": "female", "score": 0, "description": "You are Harmony, a baker. Sweet and methodical, you often use baking analogies and have a habit of offering baked goods to illustrate your points." }, { "name": "Gabriel", "gender": "male", "score": 0, "description": "You are Gabriel, a pirate. Boisterous and adventurous, you speak in pirate slang and have a habit of turning conversations into grand tales of the high seas." }, { "name": "Kenneth", "gender": "male", "score": 200, "description": "You are Kenneth, a fisherman. Patient and observant, you often use fishing metaphors and have a habit of turning everyday situations into fishing stories." }, { "name": "Vladimir", "gender": "male", "score": 500, "description": "You are Vladimir, a yogi. Calm and centered, you speak in yoga terms and often incorporate meditation tips into your advice." }];
-
-            presentation = { "slides": [{ "textContent": "# Marine Biotechnology", "narration": "Hello everyone, I'm Professor Noodle, and today I'm excited to share with you the fascinating world of Marine Biotechnology. As an expert in Marine Biology, I'll be taking you on a journey to explore the incredible applications and innovations arising from the ocean's vast resources." }, { "textContent": "# What is Marine Biotechnology?\n\n- Applying biological knowledge and techniques to the marine environment\n- Harnessing the potential of marine organisms and their unique properties\n- Developing new products, processes, and technologies for various industries", "narration": "So, what exactly is Marine Biotechnology? In simple terms, it's the application of biological knowledge and techniques to the marine environment. By harnessing the incredible potential of marine organisms and their unique properties, we can develop new and innovative products, processes, and technologies for a wide range of industries, from pharmaceuticals to agriculture and beyond." }, { "textContent": "# Pharmaceutical Applications\n\n- Discovering new drugs from marine organisms\n- Developing novel antibiotics and antimicrobial compounds\n- Exploring the potential of marine-derived enzymes and biomolecules", "narration": "One of the most exciting areas of Marine Biotechnology is its potential in the pharmaceutical industry. Researchers are constantly discovering new drugs and medicinal compounds from marine organisms, such as sponges, algae, and microbes. These organisms have evolved unique biochemical properties that can be harnessed for the development of novel antibiotics, antimicrobial agents, and other therapeutics. Additionally, marine-derived enzymes and biomolecules are being explored for their diverse applications in drug development and production." }, { "textContent": "# Environmental Applications\n\n- Bioremediation of polluted marine environments\n- Development of sustainable aquaculture and mariculture techniques\n- Utilization of marine biomass for biofuel production", "narration": "Marine Biotechnology also has significant applications in the environmental realm. Researchers are using marine organisms and their capabilities to aid in the bioremediation of polluted marine environments, helping to clean up oil spills, heavy metal contamination, and other forms of pollution. Additionally, Marine Biotechnology is contributing to the development of more sustainable aquaculture and mariculture practices, as well as the utilization of marine biomass for the production of biofuels and other renewable energy sources." }, { "textContent": "# Industrial Applications\n\n- Extraction of valuable compounds from marine organisms\n- Production of specialty chemicals and cosmetic ingredients\n- Development of new materials and textiles inspired by marine life", "narration": "Beyond the pharmaceutical and environmental sectors, Marine Biotechnology also has a wide range of industrial applications. Researchers are extracting valuable compounds, such as pigments, enzymes, and biopolymers, from marine organisms and using them to develop specialty chemicals, cosmetic ingredients, and even new materials and textiles inspired by the unique properties of marine life. The potential for innovation and disruption in these industries is truly remarkable." }, { "textContent": "# Conclusion\n\n- Marine Biotechnology is a rapidly evolving field with immense potential\n- By harnessing the unique properties and capabilities of marine organisms, we can develop groundbreaking solutions to global challenges\n- The future of Marine Biotechnology is bright, with endless possibilities for innovation and discovery", "narration": "In conclusion, Marine Biotechnology is a rapidly evolving and incredibly exciting field. By continuing to explore and harness the incredible potential of the marine environment, we can develop groundbreaking solutions to global challenges, from developing new lifesaving drugs to addressing environmental concerns and driving industrial innovation. The future of Marine Biotechnology is bright, and I can't wait to see what the next generation of researchers and innovators will accomplish. Thank you all for your attention, and I hope you're as inspired as I am to learn more about this fascinating field." }], "questions": ["What is the primary focus of Marine Biotechnology?", "How can Marine Biotechnology contribute to the development of new drugs and antibiotics?", "What are some of the environmental applications of Marine Biotechnology?", "How can Marine Biotechnology be used to produce specialty chemicals and materials?", "What is the overall potential of Marine Biotechnology in addressing global challenges?"] };
             showPage('config');
 
         });
