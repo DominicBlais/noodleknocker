@@ -118,7 +118,7 @@ The presentation will take about 3 minutes to present.
 
 **Important:** Your responses should be limited to spoken content only. Don't include any non-verbal elements such as actions, emotes, or descriptions. Keep your responses very short, clear, and conversational.`,
 
-	SYSTEM_PROFESSOR_GRADES: `You are Professor Noodle, an expert on {{CONCEPT}} in the field of {{FIELD_OF_STUDY}}. You have given a presentation on the concept of "{{CONCEPT}}" as part of a learning game called Noodle Knocker. You are now tasked with grading the user's answer to a question about {{CONCEPT}} based on how well the answer reflects the information in the Presentation Transcript below. Give the grade verbally along with the reason for why you chose that grade. Keep your answer very short and to the point.
+	SYSTEM_PROFESSOR_GRADES: `You are Professor Noodle, an expert on {{CONCEPT}} in the field of {{FIELD_OF_STUDY}}. You have given a presentation on the concept of "{{CONCEPT}}" as part of a learning game called Noodle Knocker. You are now tasked with grading the user's answer to a question about {{CONCEPT}} based on how well the answer reflects the information in the Presentation below. Give the grade verbally along with the reason for why you chose that grade. Keep your answer very short and to the point.
 
 The grade you give should be an integer between 0 and 100 (higher is better). Answers that are largely incorrect or incomplete should receive a grade less than 25, and only good answers should receive a grade of 75 or higher. **Be sure to explain why you choose the grade you give.** 
 	
@@ -126,7 +126,7 @@ The grade you give should be an integer between 0 and 100 (higher is better). An
 
 **Important:** Your response should be limited to spoken content only. Don't include any non-verbal elements such as actions, emotes, or descriptions.
 
-## Presentation Transcript
+## Presentation
 
 {{PRESENTATION_TRANSCRIPT}}`,
 
@@ -227,6 +227,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		if (!this.clientIP) {
 			this.clientIP = 'localhost';
 		}
+		console.log('Connection from', this.clientIP);
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
 		this.ctx.acceptWebSocket(server);
@@ -311,7 +312,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		let response;
 		let attempts = 0;
 		let validator = new Validator(Schema.CREATE_TRIVIA);
-		while (attempts < 5) {
+		while (attempts < 3) {
 			try {
 				response = await this.anthropic.messages.create({
 					model: this.env.ANTHROPIC_MODEL,
@@ -340,18 +341,23 @@ export class NoodleKnockerDurableObject extends DurableObject {
 				console.error(e);
 				attempts++;
 			}
-			await new Promise(resolve => setTimeout(resolve, 2000 * attempts));  // mitigate 529 errors (overloads), etc
+			await new Promise(resolve => setTimeout(resolve, 1000 * attempts));  // mitigate 529 errors (overloads), etc
 		}
-		if (attempts === 5) {
+		if (attempts === 3) {
 			console.error('Failed to generate trivia');
-			throw new Error('Failed to generate trivia');
+			this.sendCmd(Commands.GENERATE_STARTED, {
+				concept: this.concept,
+				fieldOfStudy: this.fieldOfStudy,
+				trivia: ['Generating...']
+			});
+		} else {
+			console.log(response);
+			this.sendCmd(Commands.GENERATE_STARTED, {
+				concept: this.concept,
+				fieldOfStudy: this.fieldOfStudy,
+				trivia: response.content[0].input.trivia
+			});
 		}
-		console.log(response);
-		this.sendCmd(Commands.GENERATE_STARTED, {
-			concept: this.concept,
-			fieldOfStudy: this.fieldOfStudy,
-			trivia: response.content[0].input.trivia
-		});
 
 		let difficultySnippet = '**Important:** The presentation should be clear and understandable, targeting relatively uneducated adults new to the material. Ensure that the test questions are appropriate for this audience, ranging from easy to moderately challenging.';
 		if (this.difficulty === Difficulties.EASY) {
@@ -453,11 +459,14 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		});
 	}
 
+	
 	splitFirstSentence(text) {
-		const match = text.match(/(.*?[\.\?\!])(.*)/);
-		const firstSentence = match ? match[1].trim() : '';
-		const remainder = match ? match[2].trim() : text.trim();
-		return [firstSentence, remainder];
+		const index = text.search(/[.?!]/);
+		if (index === -1) {
+			return ['', text];
+		} else {
+			return [text.substring(0, index + 1), text.substring(index + 1)];
+		}
 	}
 
 	async handleAskQuestion(question) {
@@ -575,17 +584,16 @@ export class NoodleKnockerDurableObject extends DurableObject {
 					teachingConversation += `**${this.playerNames[playerIndex]}:** ${rawConversation[i].content}\n\n`;
 				}
 			}
-			console.log(teachingConversation);
 			prompt = this.playerData[playerIndex].description + '\n\n' + Prompts.SYSTEM_ANSWER_ADDENDUM
-			.replace(/{{CONCEPT}}/g, this.concept)
-			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
-			.replace(/{{PLAYER}}/g, this.playerNames[playerIndex])
-			.replace(/{{TEACHING_CONVERSATION}}/g, teachingConversation);
+				.replace(/{{CONCEPT}}/g, this.concept)
+				.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
+				.replace(/{{PLAYER}}/g, this.playerNames[playerIndex])
+				.replace(/{{TEACHING_CONVERSATION}}/g, teachingConversation);
 		} else {
 			prompt = this.playerData[playerIndex].description + '\n\n' + Prompts.SYSTEM_ANSWER_DUH_ADDENDUM
-			.replace(/{{CONCEPT}}/g, this.concept)
-			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
-			.replace(/{{PLAYER}}/g, this.playerNames[playerIndex])
+				.replace(/{{CONCEPT}}/g, this.concept)
+				.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
+				.replace(/{{PLAYER}}/g, this.playerNames[playerIndex])
 		}
 		
 		const stream = this.anthropic.messages.stream({
@@ -631,7 +639,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	}
 
 	async handleProfessorGrades(playerIndex, questionIndex) {
-		console.log('grading...');
 		try {
 		let answerBuffer = '';
 		let difficultySnippet = 'The grade you give should be generous and lenient, as the user is a beginner in their studies. Be encouraging and positive in your reason for the grade.';
@@ -645,7 +652,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 			.replace(/{{FIELD_OF_STUDY}}/g, this.fieldOfStudy)
 			.replace(/{{DIFFICULTY_SNIPPET}}/g, difficultySnippet)
 			.replace(/{{PRESENTATION_TRANSCRIPT}}/g, this.transcript);
-		console.log('here?');
 		const stream = this.anthropic.messages.stream({
 			model: this.env.ANTHROPIC_MODEL,
 			max_tokens: 512,
@@ -714,7 +720,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 						grade = 0;
 					}
 				}
-				console.log('Grade:', grade, 'Answer:', answer);
 				this.playerData[playerIndex].score += grade;
 				this.finishSpeaking();
 				this.sendCmd(Commands.PROFESSOR_QUIZ_FINISHED, {
@@ -733,7 +738,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	}
 
 	getVoice(speaker) {
-		console.log('Voice:', speaker);
 		if (speaker === Speakers.PROFESSOR) {
 			return this.professorVoice;
 		} else if (speaker === Speakers.PLAYER1) {
@@ -765,7 +769,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 				this.speakWs = new w3cwebsocket(this.env.DEEPGRAM_SPEAK_ENDPOINT + `?model=${newVoice}&encoding=mp3`,["token", this.env.DEEPGRAM_API_KEY]);
 				const target = this;
 				this.speakWs.onopen = function (event) {
-					console.log('Opening...');
 				};
 				this.speakWs.onmessage = function (event) {
 					if (typeof event.data !== 'string') {
@@ -775,7 +778,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 					} else {
 						const jsonData = JSON.parse(event.data);
 						if (jsonData.type === 'Metadata') {
-							console.log("Speaking at " + Date.now() + ' ' + target.speakBuffer);
 							// remove emotes from speech -- rarely necessary with sonnet 3.5+
 							let text = target.speakBuffer.replace(/\*([^*\s][^*]*?\s[^*]*?)\*/g, '');
 							target.speakWs.send(JSON.stringify({
@@ -795,17 +797,15 @@ export class NoodleKnockerDurableObject extends DurableObject {
 					}
 				};
 				this.speakWs.onerror = function (event) {
-					console.log(event);
+					console.error(event);
 				};
 				this.speakWs.onclose = function (event) {
-					console.log(event);
 				}
 			} catch (err) {
 				console.error(err);
 			}
 		} else {
 			if (this.speakWs !== null && this.speakWs.readyState === WebSocket.OPEN) {
-				console.log("More speaking at " + Date.now() + ' ' + text);
 				this.speakWs.send(JSON.stringify({
 					type: 'Speak',
 					text: text.replace(/\*([^*\s][^*]*?\s[^*]*?)\*/g, '')
@@ -822,10 +822,8 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	}
 
 	finishSpeaking() {
-		console.log('SHOULD FLUSH');
 		function checkFlush() {
 			const delta = Date.now() - this.flushRequestedAt;
-			console.log('here...', delta);
 			if (delta > 300 && delta < 700) {
 				this.sendCmd(Commands.DONE_SPEAKING, {});
 				this.flushRequestedAt = 0;
@@ -861,7 +859,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 			this.transcribeWs = new w3cwebsocket(this.env.DEEPGRAM_TRANSCRIBE_ENDPOINT + `?encoding=linear16&sample_rate=${sampleRate}&smart_format=true`,["token", this.env.DEEPGRAM_API_KEY]);
 			const target = this;
 			this.transcribeWs.onopen = function (event) {
-				console.log('opening...');
 			};
 			this.transcribeWs.onmessage = function (event) {
 				const jsonData = JSON.parse(event.data);
@@ -876,10 +873,9 @@ export class NoodleKnockerDurableObject extends DurableObject {
 				}
 			};
 			this.transcribeWs.onerror = function (event) {
-				console.log(event);
+				console.error(event);
 			};
 			this.transcribeWs.onclose = function (event) {
-				console.log('Closing...');
 				target.sendCmd(Commands.TRANSCRIBE_DONE, {});
 				this.transcribeWs = null;
 			}
@@ -903,10 +899,9 @@ export class NoodleKnockerDurableObject extends DurableObject {
 				this.transcribeWs.send(message);
 			}
 		} else {
-			console.log("Message", message);
 			try {
 				var jsonData = JSON.parse(message);
-				console.log(jsonData.cmd);
+				console.log(jsonData.cmd, 'received');
 				if (jsonData.cmd === Commands.GENERATE) {
 					this.difficulty = jsonData.difficulty;
 					this.playerCount = jsonData.playerCount;

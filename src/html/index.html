@@ -1,15 +1,17 @@
-
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Noodle Knocker - The Learn to Party Game!</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.1/css/bulma.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"
+        integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
-
         body {
             display: flex;
             min-height: 100vh;
@@ -19,12 +21,15 @@
         .page {
             display: none;
         }
+
         .page.is-active {
             display: block;
         }
+
         .footer {
             padding: 1rem 1.5rem 1rem;
         }
+
         .avatar-image {
             max-width: 200px;
             margin: 0 auto;
@@ -39,9 +44,15 @@
             height: 40px;
             animation: spin 2s linear infinite;
         }
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         #slide-image {
@@ -50,23 +61,26 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 0; /* Place it behind other elements */
+            z-index: 0;
+            /* Place it behind other elements */
         }
-        
+
         #slide-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             opacity: 0.2;
         }
-        
+
         /* Add styles for the card to ensure it's above the background */
         #study .card {
             position: relative;
-            z-index: 1; /* Place it above the background image */
-            background-color: rgba(255, 255, 255, 0.925); /* Add a semi-transparent background */
+            z-index: 1;
+            /* Place it above the background image */
+            background-color: rgba(255, 255, 255, 0.925);
+            /* Add a semi-transparent background */
         }
-        
+
         /* Ensure the content is above the background */
         #study .card-content,
         #study .box,
@@ -78,7 +92,7 @@
         .navbar-brand {
             width: 100%;
         }
-        
+
         .ml-auto {
             margin-left: auto;
         }
@@ -91,44 +105,49 @@
         .box strong {
             color: black;
         }
-
-        
     </style>
 </head>
+
 <body>
     <nav class="navbar has-background-primary-05 is-fixed-top" role="navigation" aria-label="main navigation">
         <div class="navbar-brand is-fullwidth">
-            <div class="navbar-item is-size-5 has-text-weight-bold" id="current-page-title"><img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&radius=50&backgroundColor=327AFF" style="width:32px;height:32px" /></div>
+            <div class="navbar-item is-size-5 has-text-weight-bold" id="current-page-title"><img
+                    src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&radius=50&backgroundColor=327AFF"
+                    style="width:32px;height:32px" /></div>
             <div class="navbar-item has-text-right ml-auto" id="current-page-info">
                 <div class="top-buttons is-hidden" id="config-top-buttons">
                     <button class="button is-link is-fullwidth" onclick="startGame()">Start Game</button>
                 </div>
                 <div class="top-buttons is-hidden" id="study-top-buttons">
                     <div class="buttons is-centered">
-                        <button class="button" onclick="prevSlide()" id="previous-slide-button">Previous Slide</button> 
+                        <button class="button" onclick="prevSlide()" id="previous-slide-button">Previous Slide</button>
                         <button class="button is-info" onclick="nextSlide()" id="next-slide-button">Next Slide</button>
                     </div>
                 </div>
                 <div class="top-buttons is-hidden" id="q_and_a-top-buttons">
                     <div class="buttons is-centered">
-                        <button class="button is-warning" id="question-recording-button" onclick="toggleRecordingQuestion()">Ask Question</button>
+                        <button class="button is-warning" id="question-recording-button"
+                            onclick="toggleRecordingQuestion()">Ask Question</button>
                         <button class="button is-link" onclick="showPage('teach')">Ready</button>
                     </div>
                 </div>
                 <div class="top-buttons is-hidden" id="teach-top-buttons">
                     <div class="buttons is-centered">
-                        <button class="button is-warning" id="teach-recording-button" onclick="toggleRecordingTeaching()">Start Talking</button>
-                        <button class="button is-info" onclick="prepareNextTeacher()" id="next-player-button">Next Player</button>
+                        <button class="button is-warning" id="teach-recording-button"
+                            onclick="toggleRecordingTeaching()">Start Talking</button>
+                        <button class="button is-info" onclick="prepareNextTeacher()" id="next-player-button">Next
+                            Player</button>
                     </div>
                 </div>
                 <div class="top-buttons is-hidden" id="quiz-top-buttons">
                     <div class="buttons is-centered">
-                        <button class="button is-info" onclick="quizButtonPressed()" id="quiz-next-button">Quizzing...</button>
+                        <button class="button is-info" onclick="quizButtonPressed()"
+                            id="quiz-next-button">Quizzing...</button>
                     </div>
                 </div>
                 <div class="top-buttons is-hidden" id="results-top-buttons">
                     <div class="buttons is-centered">
-                        <button class="button is-link" onclick="resetGame()">Ready</button>
+                        <button class="button is-link" onclick="resetGame()">Play Again</button>
                     </div>
                 </div>
             </div>
@@ -144,7 +163,9 @@
             <div id="config" class="page is-active">
                 <article class="message is-info">
                     <div class="message-body">
-                        Welcome to <strong>Noodle Knocker</strong>! This fun party game for up to 4 players challenges you to learn something new and teach it to your AI partner. Your partner then answers Professor Noodle's questions, and the best teacher wins!
+                        Welcome to <strong>Noodle Knocker</strong>! This fun party game for up to 4 players challenges
+                        you to learn something new and teach it to your AI partner. Your partner then answers Professor
+                        Noodle's questions, and the best teacher wins!
                     </div>
                 </article>
 
@@ -190,7 +211,8 @@
             <div id="study" class="page">
                 <article class="message is-info">
                     <div class="message-body">
-                        Watch Professor's Noodle quick presentation. You'll need to teach your AI partner about this topic to win!
+                        Watch Professor's Noodle quick presentation. You'll need to teach your AI partner about this
+                        topic to win!
                     </div>
                 </article>
 
@@ -199,28 +221,31 @@
                 <div class="columns is-centered">
                     <div class="column is-2">
                         <div class="avatar-professor avatar-talk">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-professor avatar-normal">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-professor avatar-blink">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                     </div>
                     <div class="column">
                         <div class="box is-fullwidth has-background-warning-light">
                             <div class="has-text-weight-bold has-text-link-dark">
-                                <p id="slide-caption">Caption area for study material</p>                                            
+                                <p id="slide-caption">Caption area for study material</p>
                             </div>
-        
+
                         </div>
-                    </div>        
+                    </div>
                 </div>
 
                 <div class="columns is-centered">
                     <div class="column is-two-thirds">
-                        <div class="card"  data-theme="light">
+                        <div class="card" data-theme="light">
                             <figure class="image" id="slide-image">
                             </figure>
                             <div class="card-content">
@@ -232,7 +257,7 @@
                                         <li>Two</li>
                                     </ul>
                                 </div>
-                            </div>                            
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -242,7 +267,8 @@
             <div id="q_and_a" class="page">
                 <article class="message is-info">
                     <div class="message-body">
-                        Do any players have questions for Professor Noodle? This is your last chance to learn about the topic before teaching your partner!
+                        Do any players have questions for Professor Noodle? This is your last chance to learn about the
+                        topic before teaching your partner!
                     </div>
                 </article>
 
@@ -250,33 +276,37 @@
                 <div class="columns is-centered">
                     <div class="column is-2">
                         <div class="avatar-professor avatar-talk">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-professor avatar-normal">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-professor avatar-blink">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                     </div>
                     <div class="column">
                         <div class="box is-fullwidth has-background-warning-light">
                             <div class="has-text-weight-bold has-text-link-dark">
-                                <p id="questions-caption">Caption area for study material</p>                                            
+                                <p id="questions-caption">Caption area for study material</p>
                             </div>
-        
+
                         </div>
-                    </div>        
+                    </div>
                 </div>
 
-                
+
             </div>
 
             <!-- Teach Page -->
             <div id="teach" class="page">
                 <article class="message is-info">
                     <div class="message-body">
-                        Teach your partner! Share everything you remember about the topic to prepare them for Professor Noodle's questions.
+                        Teach your partner! Share everything you remember about the topic to prepare them for Professor
+                        Noodle's questions.
                     </div>
                 </article>
 
@@ -287,19 +317,22 @@
                     <div class="column">
                         <div class="box is-fullwidth has-background-warning-light" id="teach-caption-box">
                             <div class="has-text-weight-bold has-text-link-dark">
-                                <p id="teach-caption"></p>                                            
+                                <p id="teach-caption"></p>
                             </div>
                         </div>
-                    </div>        
+                    </div>
                     <div class="column is-2">
                         <div id="teaching-avatar-talk" class="avatar-player1 avatar-talk">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&radius=50&backgroundColor=E0AC69" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&radius=50&backgroundColor=E0AC69"
+                                style="width:128px;height:128px" />
                         </div>
                         <div id="teaching-avatar-normal" class="avatar-player1 avatar-normal">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&radius=50&backgroundColor=E0AC69" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&radius=50&backgroundColor=E0AC69"
+                                style="width:128px;height:128px" />
                         </div>
                         <div id="teaching-avatar-blink" class="avatar-player1 avatar-blink">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&radius=50&backgroundColor=E0AC69" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&radius=50&backgroundColor=E0AC69"
+                                style="width:128px;height:128px" />
                         </div>
                     </div>
                 </div>
@@ -308,7 +341,9 @@
                 <div class="columns is-centered">
                     <div class="column">
                         <div class="box">
-                            <strong>Who is your partner?</strong> <p id="partner-description">Avatar description goes here. This is a paragraph-length description of the avatar.</p>
+                            <strong>Who is your partner?</strong>
+                            <p id="partner-description">Avatar description goes here. This is a paragraph-length
+                                description of the avatar.</p>
                         </div>
                     </div>
                 </div>
@@ -327,118 +362,138 @@
                 <div class="columns is-centered">
                     <div class="column is-2">
                         <div class="avatar-professor avatar-talk">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-professor avatar-normal">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-professor avatar-blink">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                     </div>
                     <div class="column">
                         <div class="box is-fullwidth has-background-warning-light">
                             <div class="has-text-weight-bold has-text-link-dark">
-                                <p id="quiz-professor-caption">Quiz question</p>                                            
+                                <p id="quiz-professor-caption">Quiz question</p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <hr/>
+                <hr />
 
 
                 <div class="columns is-centered">
                     <div class="column">
                         <div class="box is-fullwidth has-background-primary-00" id="quiz-answer-caption-box">
                             <div class="has-text-weight-bold has-text-link-dark">
-                                <p id="quiz-answer-caption"></p>                                            
+                                <p id="quiz-answer-caption"></p>
                             </div>
                         </div>
-                    </div>    
+                    </div>
                 </div>
 
                 <div class="columns is-centered is-mobile">
                     <div class="column has-text-centered has-background-link" id="player-1-quiz-column">
                         <div class="avatar-player1 avatar-talk" id="quizzing-avatar-player-1-talk">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-player1 avatar-normal" id="quizzing-avatar-player-1-normal">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-player1 avatar-blink" id="quizzing-avatar-player-1-blink">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
-                        <hr/>
-                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info" id="player-1-quiz-name">Player 1 (Dude)</p>
-                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-1-quiz-score">0</p>                    
+                        <hr />
+                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info"
+                            id="player-1-quiz-name">Player 1 (Dude)</p>
+                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-1-quiz-score">0</p>
                     </div>
                     <div class="column has-text-centered has-background-link-dark" id="player-2-quiz-column">
                         <div class="avatar-player2 avatar-talk" id="quizzing-avatar-player-2-talk">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-player2 avatar-normal" id="quizzing-avatar-player-2-normal">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-player2 avatar-blink" id="quizzing-avatar-player-2-blink">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
-                        <hr/>
-                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info" id="player-2-quiz-name">Player 2 (Dude)</p>
-                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-2-quiz-score">0</p>                    
+                        <hr />
+                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info"
+                            id="player-2-quiz-name">Player 2 (Dude)</p>
+                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-2-quiz-score">0</p>
                     </div>
                     <div class="column has-text-centered" id="player-3-quiz-column">
                         <div class="avatar-player3 avatar-talk" id="quizzing-avatar-player-3-talk">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-player3 avatar-normal" id="quizzing-avatar-player-3-normal">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-player3 avatar-blink" id="quizzing-avatar-player-3-blink">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
-                        <hr/>
-                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info" id="player-3-quiz-name">Player 3 (Dude)</p>
-                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-3-quiz-score">0</p>                    
+                        <hr />
+                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info"
+                            id="player-3-quiz-name">Player 3 (Dude)</p>
+                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-3-quiz-score">0</p>
                     </div>
                     <div class="column has-text-centered" id="player-4-quiz-column">
                         <div class="avatar-player4 avatar-talk" id="quizzing-avatar-player-4-talk">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy05&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-player4 avatar-normal" id="quizzing-avatar-player-4-normal">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
                         <div class="avatar-player4 avatar-blink" id="quizzing-avatar-player-4-blink">
-                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50" style="width:128px;height:128px" />
+                            <img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&eyes=variant22&backgroundColor=E0AC69&radius=50"
+                                style="width:128px;height:128px" />
                         </div>
-                        <hr/>
-                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info" id="player-4-quiz-name">Player 4 (Dude)</p>
-                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-4-quiz-score">0</p>                    
+                        <hr />
+                        <p class="has-text-weight-bold is-size-4 is-size-6-mobile has-text-info"
+                            id="player-4-quiz-name">Player 4 (Dude)</p>
+                        <p class="has-text-weight-bold is-size-2 has-text-warning" id="player-4-quiz-score">0</p>
                     </div>
                 </div>
             </div>
 
             <!-- Results Page -->
             <div id="results" class="page">
-                <h1 class="title is-1 has-text-centered">Results</h1>
+                <article class="message is-info">
+                    <div class="message-body">
+                        Wow, check out your score! Ready to play again?
+                    </div>
+                </article>
+
+                <h1 class="title is-1 has-text-centered">Scoreboard</h1>
                 <div class="columns is-centered">
-                    <div class="column is-half">
-                        <table class="table is-fullwidth">
-                            <thead>
-                                <tr>
-                                    <th>Player</th>
-                                    <th>Score</th>
-                                </tr>
-                            </thead>
-                            <tbody id="leaderboard">
-                                <!-- Leaderboard rows will be dynamically added here -->
-                            </tbody>
-                        </table>
-                        <button class="button is-primary is-fullwidth mt-4" onclick="showPage('config')">Play Again</button>
+                    <div class="column is-two-thirds">
+                        <hr/>
+                        <div class="fixed-grid">
+                            <div class="grid has-2-cols" id="scoreboard">
+                                
+                            </div>
+                        </div>
+                        
                     </div>
                 </div>
             </div>
 
-            
+
         </div>
     </section>
 
@@ -446,7 +501,8 @@
         <div class="modal-background"></div>
         <div class="modal-card">
             <header class="modal-card-head is-centered">
-              <p class="modal-card-title is-3 has-text-warning concept-label has-text-centered is-centered" id="concept-generating-label">Choosing Topic...</p>
+                <p class="modal-card-title is-3 has-text-warning concept-label has-text-centered is-centered"
+                    id="concept-generating-label">Choosing Topic...</p>
             </header>
             <section class="modal-card-body has-text-centered">
                 <div class="box" id="concept-trivia" data-theme="light"></div>
@@ -458,7 +514,10 @@
 
     <footer class="footer mt-auto">
         <div class="content has-text-centered is-size-7">
-            <p>Copyright &copy; 2024 by Dominic Sellers-Blais. Licensed under the <a href="https://opensource.org/license/MIT" target="_blank">MIT License</a>. <a href="#" class="has-text-warning" target="_blank">GitHub</a></p>
+            <p>Copyright &copy; 2024 by Dominic Sellers-Blais. Licensed under the <a
+                    href="https://opensource.org/license/MIT" target="_blank">MIT License</a>. <a
+                    href="https://github.com/DominicBlais/noodleknocker" class="has-text-warning"
+                    target="_blank">GitHub</a></p>
         </div>
     </footer>
 
@@ -513,7 +572,7 @@
             PLAYER3: 'player3',
             PLAYER4: 'player4'
         }
-        
+
 
         const playerNames = [
             'Player 1',
@@ -521,7 +580,7 @@
             'Player 3',
             'Player 4'
         ];
-        
+
         let playerCount = 1;
         let difficulty = 'normal';
         let concept = 'none';
@@ -547,9 +606,9 @@
         let questionsNeedingAsking = [];
         let playersNeedingToAnswer = [];
         let currentQuestionIndex = 0;
-        
+
         let responseText = '';
-        
+
         let ws;
 
         let state = States.PLAYER_SETUP;
@@ -557,6 +616,30 @@
         let waitingMusic;
 
         let whoIsTalking = Speakers.NOBODY;
+
+
+        function getCookie(name, defaultValue = '') {
+            const cname = name + '=';
+            const decodedCookie = decodeURIComponent(document.cookie);
+            const ca = decodedCookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                }
+                if (c.indexOf(cname) == 0) {
+                    return c.substring(cname.length, c.length);
+                }
+            }
+            return defaultValue;
+        }
+
+        function setCookie(name, value, days) {
+            const d = new Date();
+            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = 'expires=' + d.toUTCString();
+            document.cookie = name + '=' + value + ';' + expires + ';path=/;SameSite=Lax';
+        }
 
         function tts(text, speaker) {
             whoIsTalking = speaker;
@@ -615,18 +698,21 @@
             }
             [Speakers.PROFESSOR, Speakers.PLAYER1, Speakers.PLAYER2, Speakers.PLAYER3, Speakers.PLAYER4].forEach(setAnimationFrame);
         }
-        
+
         function updatePlayerInputs() {
             playerCount = parseInt(document.getElementById('player-count').value);
+            setCookie('playerCount', document.getElementById('player-count').value, 365);
+
             const playerNamesDiv = document.getElementById('player-names');
-            
+
             for (let i = 1; i <= 4; i++) {
                 const input = document.getElementById(`player-${i}-name`);
                 if (input) {
                     playerNames[i - 1] = input.value;
+                    setCookie('player' + i, input.value, 365);
                 }
             }
-            
+
             playerNamesDiv.innerHTML = '';
             for (let i = 1; i <= playerCount; i++) {
                 const playerField = document.createElement('div');
@@ -664,7 +750,7 @@
                 document.getElementById('teach-title').innerText = playerNames[playersNeedingToTeach[0]] + "'s Turn";
             }
             let contestantInfo = playerData[playersNeedingToTeach[0]];
-            contestantInfo.hexColor = Array.from({length: 3}, () => Math.floor(Math.random() * (256 - 120) + 120).toString(16).padStart(2, '0')).join('');
+            contestantInfo.hexColor = Array.from({ length: 3 }, () => Math.floor(Math.random() * (256 - 120) + 120).toString(16).padStart(2, '0')).join('');
             const talkContainer = document.getElementById('teaching-avatar-talk');
             const normalContainer = document.getElementById('teaching-avatar-normal');
             const blinkContainer = document.getElementById('teaching-avatar-blink');
@@ -731,14 +817,14 @@
             document.getElementById('quiz-answer-caption-box').style.removeProperty('background-color');
 
             for (let i = 0; i < playerCount; i++) {
-                document.getElementById('player-' + (i+1) + '-quiz-score').innerText = playerData[i].score;
-                document.getElementById('player-' + (i+1) + '-quiz-name').innerText = playerNames[i] + '\n(' + playerData[i].name + ')';
-                document.getElementById('player-' + (i+1) + '-quiz-column').classList.remove('has-background-link', 'has-background-link-dark', 'is-hidden');
+                document.getElementById('player-' + (i + 1) + '-quiz-score').innerText = playerData[i].score;
+                document.getElementById('player-' + (i + 1) + '-quiz-name').innerText = playerNames[i] + '\n(' + playerData[i].name + ')';
+                document.getElementById('player-' + (i + 1) + '-quiz-column').classList.remove('has-background-link', 'has-background-link-dark', 'is-hidden');
                 let contestantInfo = playerData[i];
-                contestantInfo.hexColor = Array.from({length: 3}, () => Math.floor(Math.random() * (256 - 120) + 120).toString(16).padStart(2, '0')).join('');
-                const talkContainer = document.getElementById('quizzing-avatar-player-' + (i+1) + '-talk');
-                const normalContainer = document.getElementById('quizzing-avatar-player-' + (i+1) + '-normal');
-                const blinkContainer = document.getElementById('quizzing-avatar-player-' + (i+1) + '-blink');
+                contestantInfo.hexColor = Array.from({ length: 3 }, () => Math.floor(Math.random() * (256 - 120) + 120).toString(16).padStart(2, '0')).join('');
+                const talkContainer = document.getElementById('quizzing-avatar-player-' + (i + 1) + '-talk');
+                const normalContainer = document.getElementById('quizzing-avatar-player-' + (i + 1) + '-normal');
+                const blinkContainer = document.getElementById('quizzing-avatar-player-' + (i + 1) + '-blink');
                 talkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy05&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
                 if (contestantInfo.gender === 'female') {
                     normalContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy03&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
@@ -751,7 +837,7 @@
             for (let i = 4; i > playerCount; i--) {
                 document.getElementById('player-' + i + '-quiz-column').classList.add('is-hidden');
             }
-            
+
             let text = 'Next question: ';
 
             currentQuestionIndex = 5 - questionsNeedingAsking.length;
@@ -768,7 +854,9 @@
             } else if (questionsNeedingAsking.length === 1) {
                 text = 'Last question: ' + presentation.questions[4];
             }
-            document.getElementById('quiz-help').innerText = 'The question is: ' + text.split(':', 2)[1];
+            let justQuestion = presentation.questions[5 - questionsNeedingAsking.length];
+            justQuestion = justQuestion[0].toLowerCase() + justQuestion.slice(1);
+            document.getElementById('quiz-help').innerText = 'The question is "' + justQuestion + '"';
 
             const converter = new showdown.Converter();
             document.getElementById('quiz-professor-caption').innerHTML = converter.makeHtml(text);
@@ -794,7 +882,7 @@
             }
             currentPlayerIndex = playersNeedingToAnswer.shift();
             const contestantInfo = playerData[currentPlayerIndex];
-            document.getElementById('player-' + (currentPlayerIndex+1) + '-quiz-column').classList.add('has-background-link');
+            document.getElementById('player-' + (currentPlayerIndex + 1) + '-quiz-column').classList.add('has-background-link');
             document.getElementById('quiz-answer-caption-box').style.setProperty('background-color', `#${contestantInfo.hexColor}`, 'important');
             //document.getElementById('quiz-professor-caption').innerText = '';
             isDoneWithVoice = false;
@@ -811,7 +899,7 @@
             const oldScore = playerData[playerIndex].score;
             const additionalScore = grade * (currentQuestionIndex + 1) * 10;
             playerData[playerIndex].score = oldScore + additionalScore;
-            document.getElementById('player-' + (playerIndex+1) + '-quiz-score').innerHTML = oldScore + '<br/><span class="has-text-success">+' + additionalScore + '</span>';
+            document.getElementById('player-' + (playerIndex + 1) + '-quiz-score').innerHTML = oldScore + '<br/><span class="has-text-success">+' + additionalScore + '</span>';
         }
 
         function toggleRecordingTeaching() {
@@ -836,7 +924,7 @@
                 }
             } catch (err) {
                 console.error(err);
-            }            
+            }
 
         }
 
@@ -880,7 +968,45 @@
         async function gotoResultsPage() {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('results').classList.add('is-active');
+            const defaults = {
+                spread: 360,
+                ticks: 50,
+                origin: { y: 0.25 },
+                decay: 0.94,
+                startVelocity: 30,
+                colors: ['FFE400', 'FFBD00', 'E89400', 'FFCA6C', 'FDFFB8']
+            };
+            for (let i = 0; i < playerCount; i++) {
+                playerData[i].playerName = playerNames[i];
+            }
 
+            let sortedPlayerData = playerData.slice();
+            sortedPlayerData.sort((a, b) => b.score - a.score);
+            let scoreboardHtml = `<div class="cell has-text-right m-1 mb-4"><h1 class="title is-2 has-text-info">${sortedPlayerData[0].playerName}</h1></div><div class="cell m-1 mb-4"><h1 class="title is-2 has-text-warning">${sortedPlayerData[0].score}</h1></div>`;
+            for (let i = 1; i < sortedPlayerData.length; i++) {
+                scoreboardHtml += `<div class="cell has-text-right m-1"><h1 class="subtitle is-3 has-text-info">${sortedPlayerData[i].playerName}</h1></div><div class="cell m-1"><h1 class="subtitle is-3 has-text-warning">${sortedPlayerData[i].score}</h1></div>`;
+            }
+            document.getElementById('scoreboard').innerHTML = scoreboardHtml;
+
+            function shoot() {
+                confetti({
+                    ...defaults,
+                    particleCount: 40,
+                    scalar: 1.2,
+                    shapes: ['star']
+                });
+
+                confetti({
+                    ...defaults,
+                    particleCount: 10,
+                    scalar: 0.75,
+                    shapes: ['circle']
+                });
+            }
+
+            setTimeout(shoot, 0);
+            setTimeout(shoot, 100);
+            setTimeout(shoot, 200);
         }
 
         async function startGame() {
@@ -901,7 +1027,11 @@
             waitingMusic.play();
         }
 
-        
+        function resetGame() {
+            location.reload();
+        }
+
+
         function convertFloat32ToInt16(float32Array) {
             let int16Array = new Int16Array(float32Array.length);
             for (let i = 0; i < float32Array.length; i++) {
@@ -937,7 +1067,7 @@
                 audioSource.disconnect();
                 await audioContext.close();
                 audioContext = null;
-        
+
                 if (mediaStream) {
                     mediaStream.getTracks().forEach(track => track.stop());
                     mediaStream = null;
@@ -974,15 +1104,15 @@
         function splitIntoCaptions(text) {
             const MIN_SENTENCE_LENGTH = 50;
             const MIN_CAPTION_LENGTH = 100;
-        
+
             const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
             let captions = [];
             let currentCaption = "";
-        
+
             for (let i = 0; i < sentences.length; i++) {
                 const sentence = sentences[i].trim();
                 const nextSentence = (i + 1 < sentences.length) ? sentences[i + 1].trim() : "";
-                
+
                 if (sentence.length < MIN_SENTENCE_LENGTH && nextSentence.length < MIN_SENTENCE_LENGTH) {
                     currentCaption += sentence + " ";
                 } else {
@@ -993,11 +1123,11 @@
                     }
                 }
             }
-            
+
             if (currentCaption.length > 0) {
                 captions.push(currentCaption.trim());
             }
-        
+
             return captions;
         }
 
@@ -1051,7 +1181,7 @@
                     const url = URL.createObjectURL(data);
                     voicePlayer.src = url;
                     voicePlayer.load();
-                    voicePlayer.onloadeddata = function() {
+                    voicePlayer.onloadeddata = function () {
                         voicePlayer.play();
                     }
                 } else if (isDoneWithVoice) {
@@ -1069,12 +1199,12 @@
                     } else if (state === States.STUDYING) {
                         const nextSlideButton = document.getElementById('next-slide-button');
                         nextSlideButton.classList.remove('is-info');
-                        nextSlideButton.classList.add('is-link');                   
+                        nextSlideButton.classList.add('is-link');
                     } else if (state === States.QUIZZING) {
                         if (wasProfessor) {
                             prepareNextAnswer();
                         } else {
-                            const columnElem = document.getElementById('player-' + (currentPlayerIndex+1) + '-quiz-column');
+                            const columnElem = document.getElementById('player-' + (currentPlayerIndex + 1) + '-quiz-column');
                             columnElem.classList.remove('has-background-link');
                             columnElem.classList.add('has-background-link-dark');
                             isDoneWithVoice = false;
@@ -1094,7 +1224,7 @@
             whoIsTalking = Speakers.NOBODY;
             if (speakingInterval !== null) {
                 clearInterval(speakingInterval);
-                speakingInterval = null;                     
+                speakingInterval = null;
             }
             currentSlideSentences = [];
             voiceClips = [];
@@ -1113,13 +1243,12 @@
 
             ws.onopen = function (event) {
             };
-            
+
             ws.onmessage = function (event) {
-                if (typeof event.data === 'string') {                    
+                if (typeof event.data === 'string') {
                     const jsonData = JSON.parse(event.data);
                     const cmd = jsonData['cmd'];
                     if (cmd === Commands.GENERATE_STARTED) {
-                        console.log(jsonData);
                         concept = jsonData['concept'];
                         document.querySelectorAll('.concept-label').forEach(element => {
                             element.innerText = concept;
@@ -1135,13 +1264,10 @@
                         }
                         setNextTrivia();
                     } else if (cmd === Commands.GENERATE_DONE) {
-                        console.log(jsonData);
                         waitingMusic.pause();
                         waitingMusic = null;
-                        console.log(JSON.stringify(jsonData.presentation));
                         presentation = jsonData.presentation;
                         playerData = jsonData.playerData;
-                        console.log(JSON.stringify(playerData));
                         document.getElementById('waiting-to-start-game-modal').classList.remove('is-active');
 
                         showPage('quiz');
@@ -1151,7 +1277,7 @@
                         showPage('study');
                         showSlide(0);
                         document.getElementById('slide-image').innerHTML = `<img src="${jsonData.base64Image}"/>`;
-                        
+
                         state = States.STUDYING;
                     } else if (cmd === Commands.DONE_SPEAKING) {
                         isDoneWithVoice = true;
@@ -1164,7 +1290,7 @@
                                 document.getElementById('questions-caption').innerHTML = '';
                                 sendCmd(Commands.ASK_QUESTION, {
                                     text: transcription
-                                })                                    
+                                })
                             } else {
                                 const questionsButton = document.getElementById('question-recording-button');
                                 questionsButton.innerText = 'Ask Question';
@@ -1178,13 +1304,13 @@
                                 sendCmd(Commands.TEACH_CONTESTANT, {
                                     playerIndex: currentPlayerIndex,
                                     text: transcription
-                                })                                    
+                                })
                             } else {
                                 const teachButton = document.getElementById('teach-recording-button');
                                 teachButton.innerText = 'Start Talking';
                                 teachButton.classList.remove('is-info');
                                 teachButton.classList.add('is-warning');
-                            }                            
+                            }
                         }
                     } else if (cmd === Commands.ASK_QUESTION_ANSWER_PART) {
                         const teachButton = document.getElementById('question-recording-button');
@@ -1216,17 +1342,16 @@
                         const converter = new showdown.Converter();
                         document.getElementById('quiz-answer-caption').innerHTML = converter.makeHtml(responseText);
                     } else if (cmd === Commands.CONTESTANT_QUIZ_FINISHED) {
-                        console.log('Okay, now grade the answer...');
+                        // TBD: this might be safe to prune
                     } else if (cmd === Commands.PROFESSOR_QUIZ_ANSWER_PART) {
                         whoIsTalking = Speakers.PROFESSOR;
                         responseText += jsonData.text + ' ';
                         const converter = new showdown.Converter();
-                        document.getElementById('quiz-professor-caption').innerHTML = converter.makeHtml(responseText);                        
+                        document.getElementById('quiz-professor-caption').innerHTML = converter.makeHtml(responseText);
                     } else if (cmd === Commands.PROFESSOR_QUIZ_FINISHED) {
                         processGrade(jsonData.playerIndex, jsonData.grade);
                     }
                 } else {
-                    console.log('got audio chunk');
                     voiceClips.push(event.data);
                     isDoneWithVoice = false;
                     if (speakingInterval === null) {
@@ -1236,11 +1361,17 @@
             };
 
             ws.onclose = function (event) {
-                console.log(event);
             };
 
-
+            document.getElementById('player-count').value = getCookie('playerCount', '1');
             updatePlayerInputs();
+            for (let i = 1; i <= 4; i++) {
+                const elem = document.getElementById(`player-${i}-name`);
+                if (elem) {
+                    elem.value = getCookie('player' + i, 'Player ' + i);
+                    playerNames[i - 1] = elem.value;
+                }
+            }
 
             setInterval(animateSpeakers, 70);
 
@@ -1250,24 +1381,24 @@
                 alert('Sorry, but Safari is not currently supported. Please use a different browser like Chrome, Firefox, or Edge.')
             }
 
-            
+
             setTimeout(() => {
-                console.log('hmm?');
-                //showPage('quiz');
-                
-                
+                showPage('results');
+
+
                 //tts('This is a basic text-to-speech test.', Speakers.PROFESSOR);    
             }, 300);
 
             playerCount = 4;
-            
-            playerData = [{"name":"Harmony","gender":"female","score":0,"description":"You are Harmony, a baker. Sweet and methodical, you often use baking analogies and have a habit of offering baked goods to illustrate your points."},{"name":"Gabriel","gender":"male","score":0,"description":"You are Gabriel, a pirate. Boisterous and adventurous, you speak in pirate slang and have a habit of turning conversations into grand tales of the high seas."},{"name":"Kenneth","gender":"male","score":0,"description":"You are Kenneth, a fisherman. Patient and observant, you often use fishing metaphors and have a habit of turning everyday situations into fishing stories."},{"name":"Vladimir","gender":"male","score":0,"description":"You are Vladimir, a yogi. Calm and centered, you speak in yoga terms and often incorporate meditation tips into your advice."}];
 
-            presentation = {"slides":[{"textContent":"# Marine Biotechnology","narration":"Hello everyone, I'm Professor Noodle, and today I'm excited to share with you the fascinating world of Marine Biotechnology. As an expert in Marine Biology, I'll be taking you on a journey to explore the incredible applications and innovations arising from the ocean's vast resources."},{"textContent":"# What is Marine Biotechnology?\n\n- Applying biological knowledge and techniques to the marine environment\n- Harnessing the potential of marine organisms and their unique properties\n- Developing new products, processes, and technologies for various industries","narration":"So, what exactly is Marine Biotechnology? In simple terms, it's the application of biological knowledge and techniques to the marine environment. By harnessing the incredible potential of marine organisms and their unique properties, we can develop new and innovative products, processes, and technologies for a wide range of industries, from pharmaceuticals to agriculture and beyond."},{"textContent":"# Pharmaceutical Applications\n\n- Discovering new drugs from marine organisms\n- Developing novel antibiotics and antimicrobial compounds\n- Exploring the potential of marine-derived enzymes and biomolecules","narration":"One of the most exciting areas of Marine Biotechnology is its potential in the pharmaceutical industry. Researchers are constantly discovering new drugs and medicinal compounds from marine organisms, such as sponges, algae, and microbes. These organisms have evolved unique biochemical properties that can be harnessed for the development of novel antibiotics, antimicrobial agents, and other therapeutics. Additionally, marine-derived enzymes and biomolecules are being explored for their diverse applications in drug development and production."},{"textContent":"# Environmental Applications\n\n- Bioremediation of polluted marine environments\n- Development of sustainable aquaculture and mariculture techniques\n- Utilization of marine biomass for biofuel production","narration":"Marine Biotechnology also has significant applications in the environmental realm. Researchers are using marine organisms and their capabilities to aid in the bioremediation of polluted marine environments, helping to clean up oil spills, heavy metal contamination, and other forms of pollution. Additionally, Marine Biotechnology is contributing to the development of more sustainable aquaculture and mariculture practices, as well as the utilization of marine biomass for the production of biofuels and other renewable energy sources."},{"textContent":"# Industrial Applications\n\n- Extraction of valuable compounds from marine organisms\n- Production of specialty chemicals and cosmetic ingredients\n- Development of new materials and textiles inspired by marine life","narration":"Beyond the pharmaceutical and environmental sectors, Marine Biotechnology also has a wide range of industrial applications. Researchers are extracting valuable compounds, such as pigments, enzymes, and biopolymers, from marine organisms and using them to develop specialty chemicals, cosmetic ingredients, and even new materials and textiles inspired by the unique properties of marine life. The potential for innovation and disruption in these industries is truly remarkable."},{"textContent":"# Conclusion\n\n- Marine Biotechnology is a rapidly evolving field with immense potential\n- By harnessing the unique properties and capabilities of marine organisms, we can develop groundbreaking solutions to global challenges\n- The future of Marine Biotechnology is bright, with endless possibilities for innovation and discovery","narration":"In conclusion, Marine Biotechnology is a rapidly evolving and incredibly exciting field. By continuing to explore and harness the incredible potential of the marine environment, we can develop groundbreaking solutions to global challenges, from developing new lifesaving drugs to addressing environmental concerns and driving industrial innovation. The future of Marine Biotechnology is bright, and I can't wait to see what the next generation of researchers and innovators will accomplish. Thank you all for your attention, and I hope you're as inspired as I am to learn more about this fascinating field."}],"questions":["What is the primary focus of Marine Biotechnology?","How can Marine Biotechnology contribute to the development of new drugs and antibiotics?","What are some of the environmental applications of Marine Biotechnology?","How can Marine Biotechnology be used to produce specialty chemicals and materials?","What is the overall potential of Marine Biotechnology in addressing global challenges?"]};
-           showPage('config');
+            playerData = [{ "name": "Harmony", "gender": "female", "score": 0, "description": "You are Harmony, a baker. Sweet and methodical, you often use baking analogies and have a habit of offering baked goods to illustrate your points." }, { "name": "Gabriel", "gender": "male", "score": 0, "description": "You are Gabriel, a pirate. Boisterous and adventurous, you speak in pirate slang and have a habit of turning conversations into grand tales of the high seas." }, { "name": "Kenneth", "gender": "male", "score": 200, "description": "You are Kenneth, a fisherman. Patient and observant, you often use fishing metaphors and have a habit of turning everyday situations into fishing stories." }, { "name": "Vladimir", "gender": "male", "score": 500, "description": "You are Vladimir, a yogi. Calm and centered, you speak in yoga terms and often incorporate meditation tips into your advice." }];
+
+            presentation = { "slides": [{ "textContent": "# Marine Biotechnology", "narration": "Hello everyone, I'm Professor Noodle, and today I'm excited to share with you the fascinating world of Marine Biotechnology. As an expert in Marine Biology, I'll be taking you on a journey to explore the incredible applications and innovations arising from the ocean's vast resources." }, { "textContent": "# What is Marine Biotechnology?\n\n- Applying biological knowledge and techniques to the marine environment\n- Harnessing the potential of marine organisms and their unique properties\n- Developing new products, processes, and technologies for various industries", "narration": "So, what exactly is Marine Biotechnology? In simple terms, it's the application of biological knowledge and techniques to the marine environment. By harnessing the incredible potential of marine organisms and their unique properties, we can develop new and innovative products, processes, and technologies for a wide range of industries, from pharmaceuticals to agriculture and beyond." }, { "textContent": "# Pharmaceutical Applications\n\n- Discovering new drugs from marine organisms\n- Developing novel antibiotics and antimicrobial compounds\n- Exploring the potential of marine-derived enzymes and biomolecules", "narration": "One of the most exciting areas of Marine Biotechnology is its potential in the pharmaceutical industry. Researchers are constantly discovering new drugs and medicinal compounds from marine organisms, such as sponges, algae, and microbes. These organisms have evolved unique biochemical properties that can be harnessed for the development of novel antibiotics, antimicrobial agents, and other therapeutics. Additionally, marine-derived enzymes and biomolecules are being explored for their diverse applications in drug development and production." }, { "textContent": "# Environmental Applications\n\n- Bioremediation of polluted marine environments\n- Development of sustainable aquaculture and mariculture techniques\n- Utilization of marine biomass for biofuel production", "narration": "Marine Biotechnology also has significant applications in the environmental realm. Researchers are using marine organisms and their capabilities to aid in the bioremediation of polluted marine environments, helping to clean up oil spills, heavy metal contamination, and other forms of pollution. Additionally, Marine Biotechnology is contributing to the development of more sustainable aquaculture and mariculture practices, as well as the utilization of marine biomass for the production of biofuels and other renewable energy sources." }, { "textContent": "# Industrial Applications\n\n- Extraction of valuable compounds from marine organisms\n- Production of specialty chemicals and cosmetic ingredients\n- Development of new materials and textiles inspired by marine life", "narration": "Beyond the pharmaceutical and environmental sectors, Marine Biotechnology also has a wide range of industrial applications. Researchers are extracting valuable compounds, such as pigments, enzymes, and biopolymers, from marine organisms and using them to develop specialty chemicals, cosmetic ingredients, and even new materials and textiles inspired by the unique properties of marine life. The potential for innovation and disruption in these industries is truly remarkable." }, { "textContent": "# Conclusion\n\n- Marine Biotechnology is a rapidly evolving field with immense potential\n- By harnessing the unique properties and capabilities of marine organisms, we can develop groundbreaking solutions to global challenges\n- The future of Marine Biotechnology is bright, with endless possibilities for innovation and discovery", "narration": "In conclusion, Marine Biotechnology is a rapidly evolving and incredibly exciting field. By continuing to explore and harness the incredible potential of the marine environment, we can develop groundbreaking solutions to global challenges, from developing new lifesaving drugs to addressing environmental concerns and driving industrial innovation. The future of Marine Biotechnology is bright, and I can't wait to see what the next generation of researchers and innovators will accomplish. Thank you all for your attention, and I hope you're as inspired as I am to learn more about this fascinating field." }], "questions": ["What is the primary focus of Marine Biotechnology?", "How can Marine Biotechnology contribute to the development of new drugs and antibiotics?", "What are some of the environmental applications of Marine Biotechnology?", "How can Marine Biotechnology be used to produce specialty chemicals and materials?", "What is the overall potential of Marine Biotechnology in addressing global challenges?"] };
+            showPage('config');
 
         });
 
     </script>
 </body>
+
 </html>
