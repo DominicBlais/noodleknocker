@@ -738,14 +738,18 @@
         }
 
         function prepareNextTeacher() {
-            stopSpeaking();
-            state = States.TEACHING;
-            currentPlayerIndex = playersNeedingToTeach[0];
-            const nextPlayerButton = document.getElementById('next-player-button');
-            if (playersNeedingToTeach.length === 0) {
-                showPage('quiz');
+            const teachButton = document.getElementById('teach-recording-button');
+            if (teachButton.innerText !== 'Start Talking') {
                 return;
-            } else if (playersNeedingToTeach.length === 1) {
+            }            
+            stopSpeaking();
+            if (playersNeedingToTeach.length === 0) {
+                showPage('quiz');                    
+                return;                
+            }
+            state = States.TEACHING;
+            const nextPlayerButton = document.getElementById('next-player-button');
+            if (playersNeedingToTeach.length === 1) {
                 nextPlayerButton.classList.remove('is-info');
                 nextPlayerButton.classList.add('is-link');
                 nextPlayerButton.innerText = 'Ready';
@@ -754,6 +758,7 @@
                 nextPlayerButton.classList.add('is-info');
                 nextPlayerButton.innerText = 'Next Teacher';
             }
+            currentPlayerIndex = playersNeedingToTeach[0];
             if (playerNames[playersNeedingToTeach[0]].endsWith('s') || playerNames[playersNeedingToTeach[0]].endsWith('S')) {
                 document.getElementById('teach-title').innerText = playerNames[playersNeedingToTeach[0]] + "' Turn";
             } else {
@@ -787,7 +792,6 @@
                 .replace(/Your/g, 'My')
                 .replace(/you/gi, 'I');
             document.getElementById('teach-caption-box').style.setProperty('background-color', `#${contestantInfo.hexColor}`, 'important');
-            const teachButton = document.getElementById('teach-recording-button');
             teachButton.innerText = 'Thinking...';
             teachButton.classList.remove('is-danger');
             teachButton.classList.add('is-info');
