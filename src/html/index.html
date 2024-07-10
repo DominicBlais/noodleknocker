@@ -105,6 +105,10 @@
         .box strong {
             color: black;
         }
+
+        .message-body {
+            font-size:90%;
+        }
     </style>
 </head>
 
@@ -165,7 +169,7 @@
                     <div class="message-body">
                         Welcome to <strong>Noodle Knocker</strong>! This fun learning game for up to 4 players challenges
                         you to learn something new and teach it to your AI partner. Your partner then answers Professor
-                        Noodle's questions, and the best teacher wins!
+                        Noodle's questions, and the best teacher wins! <strong>Press the "Start Game" button to begin.</strong>
                     </div>
                 </article>
 
@@ -212,7 +216,7 @@
                 <article class="message is-info">
                     <div class="message-body">
                         Watch Professor's Noodle quick presentation (notes <em>are</em> allowed.) You'll need to teach your AI partner about this
-                        topic to win!
+                        topic to win. <strong>After Professor Noodle finishes presenting a slide, press "Next Slide" to continue.</strong>
                     </div>
                 </article>
 
@@ -268,7 +272,7 @@
                 <article class="message is-info">
                     <div class="message-body">
                         Do any players have questions for Professor Noodle? This is your last chance to learn about the
-                        topic before teaching your partner!
+                        topic before teaching your partner. <strong>Press "Ask Question" to ask a question, then that same button again when done recording your question. When you're done asking questions, press "Ready".</strong>
                     </div>
                 </article>
 
@@ -305,8 +309,8 @@
             <div id="teach" class="page">
                 <article class="message is-info">
                     <div class="message-body">
-                        Teach your partner! Share everything you remember about the topic to prepare them for Professor
-                        Noodle's questions.
+                        Time to teach your partner! Share everything you remember about the topic to prepare them for Professor
+                        Noodle's questions. <strong>Press "Start Talking" to ask a question, then that same button again when done recording. When you're done asking questions, press "Ready", but be sure that you've taught your partner everything you think they'll need!</strong>
                     </div>
                 </article>
 
@@ -507,7 +511,7 @@
             <section class="modal-card-body has-text-centered">
                 <div class="box" id="concept-trivia" data-theme="light"></div>
                 <div id="progress-indicator"></div>
-                <p class="has-text-centered is-size-6">Please wait. Your game is being generated...</p>
+                <p class="has-text-centered is-size-6">Please wait while your game is being created...</p>
             </section>
         </div>
     </div>
@@ -856,7 +860,7 @@
             }
             let justQuestion = presentation.questions[5 - questionsNeedingAsking.length];
             justQuestion = justQuestion[0].toLowerCase() + justQuestion.slice(1);
-            document.getElementById('quiz-help').innerText = 'The question is "' + justQuestion + '"';
+            document.getElementById('quiz-help').innerHTML = 'The question is <strong>&quot;' + justQuestion + '&quot;</strong>';
 
             const converter = new showdown.Converter();
             document.getElementById('quiz-professor-caption').innerHTML = converter.makeHtml(text);
@@ -1365,6 +1369,9 @@
             };
 
             ws.onclose = function (event) {
+                console.log('Websocket closed!');
+                alert('The connection was lost. Please reload the page.');
+                location.reload();
             };
 
             document.getElementById('player-count').value = getCookie('playerCount', '1');

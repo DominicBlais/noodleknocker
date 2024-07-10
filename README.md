@@ -18,6 +18,8 @@ Finally, **Noodle Knocker** is also a demonstration of the potential of AI-to-AI
 
 **Noodle Knocker** makes extensive use of voice interaction through [Deepgram](https://deepgram.com)'s text-to-speech and speech-to-text services. Deepgram provides superb performance, allowing for very natural conversational flow and, thereby, a more convincing interaction with the app's AI personalities.
 
+Internally, **Noodle Knocker** is written with JavaScript, has a number of "hacks" due to Cloudflare Worker's constraints, and makes extensive use of web sockets and Cloudflare's Durable Objects persistent worker system.
+
 ## How To Run It
 
 **Noodle Knocker** can be run online at [https://noodleknocker.ed2ai.workers.dev](https://noodleknocker.ed2ai.workers.dev) or as your own Cloudflare Worker project based on Noodle Knocker's [source code repository](https://github.com/DominicBlais/noodleknocker). For the later option, visit [Cloudflare's docs](https://developers.cloudflare.com/workers/) to get started with your Worker project, then add in the repository's source and install all necessary packages with `npm`.
@@ -44,6 +46,8 @@ new_classes = ["NoodleKnockerDurableObject"]
 [ai]
 binding = "AI"
 ```
+
+Note that Safari browsers do not currently work properly with **Noodle Knocker** due to Safari's very strict permissions on all audio playback that is not explicitly initiated by the user, preventing **Noodle Knocker** intermittent background audio streaming being driven by web sockets.
 
 ## Credits
 

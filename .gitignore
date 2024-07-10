@@ -172,3 +172,6 @@ dist
 .wrangler/
 
 wrangler.toml
+
+*.key
+*.cert

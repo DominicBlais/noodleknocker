@@ -230,6 +230,11 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	];
 	flushRequestedAt = 0;
 
+	constructor(state, env) {
+		super(state, env);
+		console.log('Creating a new Durable Object...'); // xxx
+	}
+
 	async fetch(request) {
 		this.clientIP = request.headers.get('cf-connecting-ip');
 		if (!this.clientIP) {
@@ -251,7 +256,13 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		});
 	}
 
-	sendCmd(cmd, data) {
+	async sendCmd(cmd, data) {
+		let attempts = 0;
+		while (attempts < 40 && (this.ws === null || this.ws.readyState !== WebSocket.OPEN)) {
+			attempts++;
+			console.log('Waiting for WebSocket to be ready...');
+			await new Promise(resolve => setTimeout(resolve, 500));
+		}
 		this.ws.send(JSON.stringify({
 			'cmd': cmd,
 			...data
@@ -353,7 +364,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		}
 		if (attempts === 3) {
 			console.error('Failed to generate trivia');
-			console.log(this.concept, this.fieldOfStudy);
+			console.log(this);
 			this.sendCmd(Commands.GENERATE_STARTED, {
 				concept: this.concept,
 				fieldOfStudy: this.fieldOfStudy,
@@ -950,6 +961,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	}
 
 	async webSocketClose(ws, code, reason, wasClean) {
+		console.log('WebSocket closed', code, reason, wasClean); // xxx
 		if (this.speakWs !== null) {
 			this.speakWs.close();
 			this.speakWs = null;
@@ -977,6 +989,7 @@ export default {
 				}
 				const id = env.NOODLE_KNOCKER_DURABLE_OBJECT.newUniqueId();
 				const stub = env.NOODLE_KNOCKER_DURABLE_OBJECT.get(id);
+				console.log(stub); // xxx
 				return stub.fetch(request);
 			} else if (url.pathname === '/waiting-loop.mp3') {
 				return new Response(Buffer.from(waitingLoopMp3, 'base64'), { headers: { 'content-type': 'audio/mpeg' } });
