@@ -42,6 +42,8 @@ Then players' AI partners take a graded quiz:
 The results are shown and the game ends:
 ![Screen 6](docs_media/nk-screen-6.png)
 
+[View a short video example](docs_media/output_video.mp4).
+
 
 ## How To Run It
 
