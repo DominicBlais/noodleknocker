@@ -232,7 +232,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 
 	constructor(state, env) {
 		super(state, env);
-		console.log('Creating a new Durable Object...'); // xxx
 	}
 
 	async fetch(request) {
@@ -953,7 +952,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	}
 
 	async webSocketClose(ws, code, reason, wasClean) {
-		console.log('WebSocket closed', code, reason, wasClean); // xxx
 		if (this.speakWs !== null) {
 			this.speakWs.close();
 			this.speakWs = null;

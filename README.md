@@ -4,6 +4,7 @@
 
 #### Try it online: [https://noodleknocker.ed2ai.workers.dev](https://noodleknocker.ed2ai.workers.dev)
 
+
 ## Why This Matters
 
 The rapid advancement of generative AI is shifting the educational value of students' own work versus directing and managing work by AI. Improving students' ability to guide AI to produce better results on their behalf is already a key skill for many students. In some cases, students are demonstrating this shift by using AI to illicitly complete their school work, creating a conflict between learning goals and the development of these next generation managerial skills.
@@ -12,19 +13,21 @@ The rapid advancement of generative AI is shifting the educational value of stud
 
 Finally, **Noodle Knocker** is also a demonstration of the potential of AI-to-AI interactions within education. In the future, it is likely that many AI services will be interfaces to AI systems comprised by many different AI models intelligently interacting with each other. Productively orchestrating models teaching, talking, evaluating, and, more broadly, using each other is a further, more advanced example of the new managerial skill that students could benefit from developing.
 
+
 ## How It Works
 
-**Noodle Knocker** is a designed as a Cloudflare Worker, operating as an edge serverless web application. **Noodle Knocker** uses [Anthropic's Claude](https://claude.ai) LLM, a state-of-the-art LLM with excellent safety, performance, and reasoning characteristics, for all of its text-related tasks, including generating educational presentations, acting as a roleplayed conversational partner, and grading outcomes.
+**Noodle Knocker** is designed as a Cloudflare Worker and works as an edge serverless web application. **Noodle Knocker** uses [Anthropic's Claude](https://claude.ai) LLM, a state-of-the-art LLM with excellent safety, performance, and reasoning characteristics, for all of its text-related tasks, including generating educational presentations, acting as a roleplayed conversational partner, and grading outcomes.
 
-**Noodle Knocker** makes extensive use of voice interaction through [Deepgram](https://deepgram.com)'s text-to-speech and speech-to-text services. Deepgram provides superb performance, allowing for very natural conversational flow and, thereby, a more convincing interaction with the app's AI personalities.
+**Noodle Knocker** makes extensive use of voice interaction through [Deepgram](https://deepgram.com)'s text-to-speech and speech-to-text services. Deepgram provides superb performance, allowing for very natural conversational flow and, thereby, a more emotionally and intellectually convincing interaction with the app's AI personalities.
 
 Internally, **Noodle Knocker** is written with JavaScript, has a number of "hacks" due to Cloudflare Worker's constraints, and makes extensive use of web sockets and Cloudflare's Durable Objects persistent worker system.
+
 
 ## How To Run It
 
 **Noodle Knocker** can be run online at [https://noodleknocker.ed2ai.workers.dev](https://noodleknocker.ed2ai.workers.dev) or as your own Cloudflare Worker project based on Noodle Knocker's [source code repository](https://github.com/DominicBlais/noodleknocker). For the later option, visit [Cloudflare's docs](https://developers.cloudflare.com/workers/) to get started with your Worker project, then add in the repository's source and install all necessary packages with `npm`.
 
-You will need to modify your `wranger.toml` to have the entries similar to the following:
+You will need to modify your `wranger.toml` and add entries similar to the following:
 
 ```
 [vars]
@@ -47,10 +50,10 @@ new_classes = ["NoodleKnockerDurableObject"]
 binding = "AI"
 ```
 
-Note that Safari browsers do not currently work properly with **Noodle Knocker** due to Safari's very strict permissions on all audio playback that is not explicitly initiated by the user, preventing **Noodle Knocker** intermittent background audio streaming being driven by web sockets.
+Please be aware that **Noodle Knocker** is not fully compatible with Safari browsers. Safari's strict permissions require user-initiated audio playback, which interferes with **Noodle Knocker**'s web socket-driven intermittent audio playback.
+
 
 ## Credits
-
 
 **Noodle Knocker** was invented and developed by Dominic Sellers-Blais. All code is original to this project and MIT licensed. **Noodle Knocker** uses the following third-party services, libraries, and assets:
 

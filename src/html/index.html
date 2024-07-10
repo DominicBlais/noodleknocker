@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Noodle Knocker - The Learn to Party Game!</title>
+    <title>Noodle Knocker - The Learning Party Game!</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.1/css/bulma.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
@@ -115,7 +115,7 @@
 <body>
     <nav class="navbar has-background-primary-05 is-fixed-top" role="navigation" aria-label="main navigation">
         <div class="navbar-brand is-fullwidth">
-            <div class="navbar-item is-size-5 has-text-weight-bold" id="current-page-title" title="Noodle Knocker - The Learn to Party Game!"><img
+            <div class="navbar-item is-size-5 has-text-weight-bold" id="current-page-title" title="Noodle Knocker - The Learning Party Game!"><img
                     src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&radius=50&backgroundColor=327AFF"
                     style="width:32px;height:32px" /></div>
             <div class="navbar-item has-text-right ml-auto" id="current-page-info">
@@ -169,7 +169,7 @@
                     <div class="message-body">
                         Welcome to <strong>Noodle Knocker</strong>! This fun learning game for up to 4 players challenges
                         you to learn something new and teach it to your AI partner. Your partner then answers Professor
-                        Noodle's questions, and the best teacher wins! <strong>Press the "Start Game" button to begin.</strong>
+                        Noodle's questions, and the best teacher wins! <strong>Press the "Start Game" button to begin &mdash; it may take a moment to generate.</strong>
                     </div>
                 </article>
 
@@ -796,10 +796,7 @@
 
         function quizButtonPressed() {
             const nextQuizButton = document.getElementById('quiz-next-button');
-            if (nextQuizButton.innerText === 'Quizzing...') {
-                // TBD: allow them to stop speaking early
-                // stopSpeaking();
-            } else {
+            if (nextQuizButton.innerText !== 'Quizzing...') {
                 prepareNextQuestion();
             }
         }
@@ -887,7 +884,6 @@
             const contestantInfo = playerData[currentPlayerIndex];
             document.getElementById('player-' + (currentPlayerIndex + 1) + '-quiz-column').classList.add('has-background-link');
             document.getElementById('quiz-answer-caption-box').style.setProperty('background-color', `#${contestantInfo.hexColor}`, 'important');
-            //document.getElementById('quiz-professor-caption').innerText = '';
             isDoneWithVoice = false;
             speakingInterval = setInterval(continueSpeaking, 50);
             responseText = '';
@@ -903,6 +899,17 @@
             const additionalScore = grade * (currentQuestionIndex + 1) * 10;
             playerData[playerIndex].score = oldScore + additionalScore;
             document.getElementById('player-' + (playerIndex + 1) + '-quiz-score').innerHTML = oldScore + '<br/><span class="has-text-success">+' + additionalScore + '</span>';
+            if (playersNeedingToAnswer.length === 0) {
+                console.log('here...')
+                const nextQuizButton = document.getElementById('quiz-next-button');
+                if (questionsNeedingAsking.length === 0) {
+                    nextQuizButton.innerText = 'Ready';
+                } else {
+                    nextQuizButton.innerText = 'Next Question';
+                }
+                nextQuizButton.classList.add('is-link');
+                nextQuizButton.classList.remove('is-info');            
+            }
         }
 
         function toggleRecordingTeaching() {
@@ -1285,7 +1292,6 @@
                         showPage('study');
                         showSlide(0);
                         document.getElementById('slide-image').innerHTML = `<img src="${jsonData.base64Image}"/>`;
-
                         state = States.STUDYING;
                     } else if (cmd === Commands.DONE_SPEAKING) {
                         isDoneWithVoice = true;
