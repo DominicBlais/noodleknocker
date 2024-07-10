@@ -231,10 +231,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	];
 	flushRequestedAt = 0;
 
-	constructor(state, env) {
-		super(state, env);
-	}
-
+	
 	async fetch(request) {
 		this.clientIP = request.headers.get('cf-connecting-ip');
 		if (!this.clientIP) {
@@ -364,14 +361,12 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		}
 		if (attempts === 3) {
 			console.error('Failed to generate trivia');
-			console.log(this);
 			this.sendCmd(Commands.GENERATE_STARTED, {
 				concept: this.concept,
 				fieldOfStudy: this.fieldOfStudy,
 				trivia: ['Generating...']
 			});
 		} else {
-			console.log(response);
 			this.sendCmd(Commands.GENERATE_STARTED, {
 				concept: this.concept,
 				fieldOfStudy: this.fieldOfStudy,
@@ -429,7 +424,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 			console.error('Failed to generate presentation');
 			throw new Error('Failed to generate presentation');
 		}
-		console.log(response);
 		this.presentation = response.content[0].input;
 
 		this.transcript = '';
@@ -880,7 +874,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 			};
 			this.transcribeWs.onmessage = function (event) {
 				const jsonData = JSON.parse(event.data);
-				console.log(jsonData);
 				if (jsonData.type === 'Results') {
 					const text = jsonData.channel.alternatives[0].transcript;
 					if (text.length > 0) {
@@ -919,7 +912,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		} else {
 			try {
 				var jsonData = JSON.parse(message);
-				console.log(jsonData.cmd, 'received');
 				if (jsonData.cmd === Commands.GENERATE) {
 					this.difficulty = jsonData.difficulty;
 					this.playerCount = jsonData.playerCount;
@@ -988,7 +980,6 @@ export default {
 				}
 				const id = env.NOODLE_KNOCKER_DURABLE_OBJECT.newUniqueId();
 				const stub = env.NOODLE_KNOCKER_DURABLE_OBJECT.get(id);
-				console.log(stub); // xxx
 				return stub.fetch(request);
 			} else if (url.pathname === '/waiting-loop.mp3') {
 				return new Response(Buffer.from(waitingLoopMp3, 'base64'), { headers: { 'content-type': 'audio/mpeg' } });

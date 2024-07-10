@@ -836,13 +836,28 @@
                 const talkContainer = document.getElementById('quizzing-avatar-player-' + (i + 1) + '-talk');
                 const normalContainer = document.getElementById('quizzing-avatar-player-' + (i + 1) + '-normal');
                 const blinkContainer = document.getElementById('quizzing-avatar-player-' + (i + 1) + '-blink');
-                talkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy05&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                let newHtml =  `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy05&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                if (talkContainer.innerHTML !== newHtml) {
+                    talkContainer.innerHTML = newHtml;
+                }
                 if (contestantInfo.gender === 'female') {
-                    normalContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy03&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
-                    blinkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy03&eyes=variant22&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                    newHtml = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy03&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                    if (normalContainer.innerHTML !== newHtml) {
+                        normalContainer.innerHTML = newHtml;
+                    }
+                    newHtml = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy03&eyes=variant22&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                    if (blinkContainer.innerHTML !== newHtml) {
+                        blinkContainer.innerHTML = newHtml;
+                    }
                 } else {
-                    normalContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy01&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
-                    blinkContainer.innerHTML = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy01&eyes=variant01&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                    newHtml = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy01&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                    if (normalContainer.innerHTML !== newHtml) {
+                        normalContainer.innerHTML = newHtml;
+                    }
+                    newHtml = `<img src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=${contestantInfo.name}&flip=true&mouth=happy01&eyes=variant01&radius=50&backgroundColor=${contestantInfo.hexColor}" style="width:128px;height:128px" />`;
+                    if (blinkContainer.innerHTML !== newHtml) {
+                        blinkContainer.innerHTML = newHtml;
+                    }
                 }
             }
             for (let i = 4; i > playerCount; i--) {
@@ -911,7 +926,6 @@
             playerData[playerIndex].score = oldScore + additionalScore;
             document.getElementById('player-' + (playerIndex + 1) + '-quiz-score').innerHTML = oldScore + '<br/><span class="has-text-success">+' + additionalScore + '</span>';
             if (playersNeedingToAnswer.length === 0) {
-                console.log('here...')
                 const nextQuizButton = document.getElementById('quiz-next-button');
                 if (questionsNeedingAsking.length === 0) {
                     nextQuizButton.innerText = 'Ready';
