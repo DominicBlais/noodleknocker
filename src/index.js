@@ -353,6 +353,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 		}
 		if (attempts === 3) {
 			console.error('Failed to generate trivia');
+			console.log(this.concept, this.fieldOfStudy);
 			this.sendCmd(Commands.GENERATE_STARTED, {
 				concept: this.concept,
 				fieldOfStudy: this.fieldOfStudy,
@@ -919,8 +920,6 @@ export class NoodleKnockerDurableObject extends DurableObject {
 					this.speak(jsonData.text, jsonData.speaker, true);
 				} else if (jsonData.cmd === Commands.STOP_GENERATING_SPEECH) {
 					if (this.speakWs) {
-						//this.voiceWs.close();
-						//this.voiceWs = null;
 						this.speakWs.send(JSON.stringify({
 							type: 'Reset'
 						}));
