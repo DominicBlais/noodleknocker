@@ -75,7 +75,7 @@
         #study .card {
             position: relative;
             z-index: 1;
-            background-color: rgba(255, 255, 255, 0.925);
+            background-color: rgba(255, 255, 255, 0.935);
         }
 
         #study .card-content,
@@ -549,6 +549,7 @@
             PROFESSOR_QUIZ: 'professor-quiz',
             PROFESSOR_QUIZ_ANSWER_PART: 'professor-quiz-answer-part',
             PROFESSOR_QUIZ_FINISHED: 'professor-quiz-finished',
+        	KEEPALIVE: 'keepalive'
         }
 
         const Difficulties = {
@@ -620,6 +621,8 @@
 
         let whoIsTalking = Speakers.NOBODY;
 
+        let keepaliveTick = 0;
+
 
         function getCookie(name, defaultValue = '') {
             const cname = name + '=';
@@ -680,6 +683,10 @@
         }
 
         function animateSpeakers() {
+            keepaliveTick++;
+            if (keepaliveTick % 100 === 0) {
+                sendCmd(Commands.KEEPALIVE, {});
+            }
             function setAnimationFrame(target) {
                 document.querySelectorAll('.avatar-' + target).forEach(avatar => {
                     avatar.classList.add('is-hidden');
@@ -1356,7 +1363,7 @@
                         const converter = new showdown.Converter();
                         document.getElementById('quiz-answer-caption').innerHTML = converter.makeHtml(responseText);
                     } else if (cmd === Commands.CONTESTANT_QUIZ_FINISHED) {
-                        // TBD: this might be safe to prune
+                        // currently ignored
                     } else if (cmd === Commands.PROFESSOR_QUIZ_ANSWER_PART) {
                         whoIsTalking = Speakers.PROFESSOR;
                         responseText += jsonData.text + ' ';
@@ -1364,6 +1371,8 @@
                         document.getElementById('quiz-professor-caption').innerHTML = converter.makeHtml(responseText);
                     } else if (cmd === Commands.PROFESSOR_QUIZ_FINISHED) {
                         processGrade(jsonData.playerIndex, jsonData.grade);
+                    } else if (cmd == Commands.KEEPALIVE) {
+                        // ignored
                     }
                 } else {
                     voiceClips.push(event.data);

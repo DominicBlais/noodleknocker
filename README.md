@@ -22,6 +22,26 @@ Finally, **Noodle Knocker** is also a demonstration of the potential of AI-to-AI
 
 Internally, **Noodle Knocker** is written with JavaScript, has a number of "hacks" due to Cloudflare Worker's constraints, and makes extensive use of web sockets and Cloudflare's Durable Objects persistent worker system.
 
+## What It Looks Like
+
+To start, set the number of players and their names.
+![Screen 1](docs_media/nk-screen-1.png)
+
+Once the topic has been randomly chosen, the players get a short presentation by Professor Noodle about it.
+![Screen 2](docs_media/nk-screen-2.png)
+
+After the presentation, players can ask Professor Noodle any questions.
+![Screen 3](docs_media/nk-screen-3.png)
+
+Next comes the key activity: players teach their AI partners (each imbued with unique characteristics) about the topic:
+![Screen 4](docs_media/nk-screen-4.png)
+
+Then players' AI partners take a graded quiz:
+![Screen 5](docs_media/nk-screen-5.png)
+
+The results are shown and the game ends:
+![Screen 6](docs_media/nk-screen-6.png)
+
 
 ## How To Run It
 

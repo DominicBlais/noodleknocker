@@ -36,6 +36,7 @@ const Commands = {
 	PROFESSOR_QUIZ: 'professor-quiz',
 	PROFESSOR_QUIZ_ANSWER_PART: 'professor-quiz-answer-part',
 	PROFESSOR_QUIZ_FINISHED: 'professor-quiz-finished',
+	KEEPALIVE: 'keepalive'
 }
 
 const Difficulties = {
@@ -257,7 +258,7 @@ export class NoodleKnockerDurableObject extends DurableObject {
 
 	async sendCmd(cmd, data) {
 		let attempts = 0;
-		while (attempts < 40 && (this.ws === null || this.ws.readyState !== WebSocket.OPEN)) {
+		while (attempts < 60 && (this.ws === null || this.ws.readyState !== WebSocket.OPEN)) {
 			attempts++;
 			console.log('Waiting for WebSocket to be ready...');
 			await new Promise(resolve => setTimeout(resolve, 500));
@@ -781,9 +782,15 @@ export class NoodleKnockerDurableObject extends DurableObject {
 				const target = this;
 				this.speakWs.onopen = function (event) {
 				};
-				this.speakWs.onmessage = function (event) {
+				this.speakWs.onmessage = async function (event) {
 					if (typeof event.data !== 'string') {
 						if (event.data.byteLength > 0) {
+							let attempts = 0;
+							while (attempts < 60 && (target.ws === null || target.ws.readyState !== WebSocket.OPEN)) {
+								attempts++;
+								console.log('Waiting for data WebSocket to be ready...');
+								await new Promise(resolve => setTimeout(resolve, 500));
+							}
 							target.ws.send(event.data);						
 						}
 					} else {
@@ -938,6 +945,8 @@ export class NoodleKnockerDurableObject extends DurableObject {
 					this.handleContestantAnswers(jsonData.playerIndex, jsonData.questionIndex);
 				} else if (jsonData.cmd === Commands.PROFESSOR_QUIZ) {
 					this.handleProfessorGrades(jsonData.playerIndex, jsonData.questionIndex);
+				} else if (jsonData.cmd === Commands.KEEPALIVE) {
+					this.sendCmd(Commands.KEEPALIVE, {});
 				} else if (data.event === "close") {
 					if (this.speakWs !== null) {
 						this.speakWs.close();
