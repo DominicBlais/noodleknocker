@@ -219,7 +219,15 @@ export class NoodleKnockerDurableObject extends DurableObject {
 	speakBuffer = '';
 	lastVoice;
 	transcribeWs = null;
-	qAndAMessages = [];
+	qAndAMessages = [
+		{
+			role: 'user',
+			content: 'Hello!'
+		}, {
+			role: 'assistant',
+			content: 'Hello! Do you have any questions?'
+		}
+	];
 	flushRequestedAt = 0;
 
 	async fetch(request) {

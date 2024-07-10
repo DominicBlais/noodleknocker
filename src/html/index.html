@@ -111,7 +111,7 @@
 <body>
     <nav class="navbar has-background-primary-05 is-fixed-top" role="navigation" aria-label="main navigation">
         <div class="navbar-brand is-fullwidth">
-            <div class="navbar-item is-size-5 has-text-weight-bold" id="current-page-title"><img
+            <div class="navbar-item is-size-5 has-text-weight-bold" id="current-page-title" title="Noodle Knocker - The Learn to Party Game!"><img
                     src="https://api.dicebear.com/9.x/lorelei-neutral/svg?seed=Noodle&mouth=happy02&radius=50&backgroundColor=327AFF"
                     style="width:32px;height:32px" /></div>
             <div class="navbar-item has-text-right ml-auto" id="current-page-info">
@@ -163,7 +163,7 @@
             <div id="config" class="page is-active">
                 <article class="message is-info">
                     <div class="message-body">
-                        Welcome to <strong>Noodle Knocker</strong>! This fun party game for up to 4 players challenges
+                        Welcome to <strong>Noodle Knocker</strong>! This fun learning game for up to 4 players challenges
                         you to learn something new and teach it to your AI partner. Your partner then answers Professor
                         Noodle's questions, and the best teacher wins!
                     </div>
@@ -211,7 +211,7 @@
             <div id="study" class="page">
                 <article class="message is-info">
                     <div class="message-body">
-                        Watch Professor's Noodle quick presentation. You'll need to teach your AI partner about this
+                        Watch Professor's Noodle quick presentation (notes <em>are</em> allowed.) You'll need to teach your AI partner about this
                         topic to win!
                     </div>
                 </article>
@@ -236,7 +236,7 @@
                     <div class="column">
                         <div class="box is-fullwidth has-background-warning-light">
                             <div class="has-text-weight-bold has-text-link-dark">
-                                <p id="slide-caption">Caption area for study material</p>
+                                <p id="slide-caption"></p>
                             </div>
 
                         </div>
@@ -291,7 +291,7 @@
                     <div class="column">
                         <div class="box is-fullwidth has-background-warning-light">
                             <div class="has-text-weight-bold has-text-link-dark">
-                                <p id="questions-caption">Caption area for study material</p>
+                                <p id="questions-caption">Hello! Do you have any questions?</p>
                             </div>
 
                         </div>
@@ -341,7 +341,7 @@
                 <div class="columns is-centered">
                     <div class="column">
                         <div class="box">
-                            <strong>Who is your partner?</strong>
+                            <strong class="has-text-warning">Who is your partner?</strong>
                             <p id="partner-description">Avatar description goes here. This is a paragraph-length
                                 description of the avatar.</p>
                         </div>
@@ -515,9 +515,9 @@
     <footer class="footer mt-auto">
         <div class="content has-text-centered is-size-7">
             <p>Copyright &copy; 2024 by Dominic Sellers-Blais. Licensed under the <a
-                    href="https://opensource.org/license/MIT" target="_blank">MIT License</a>. <a
+                    href="https://github.com/DominicBlais/noodleknocker/blob/master/LICENSE.txt" target="_blank">MIT License</a>. <a
                     href="https://github.com/DominicBlais/noodleknocker" class="has-text-warning"
-                    target="_blank">GitHub</a></p>
+                    target="_blank">GitHub repo.</a></p>
         </div>
     </footer>
 
@@ -818,7 +818,7 @@
 
             for (let i = 0; i < playerCount; i++) {
                 document.getElementById('player-' + (i + 1) + '-quiz-score').innerText = playerData[i].score;
-                document.getElementById('player-' + (i + 1) + '-quiz-name').innerText = playerNames[i] + '\n(' + playerData[i].name + ')';
+                document.getElementById('player-' + (i + 1) + '-quiz-name').innerText = playerData[i].name + '\n(' + playerNames[i] + ')';
                 document.getElementById('player-' + (i + 1) + '-quiz-column').classList.remove('has-background-link', 'has-background-link-dark', 'is-hidden');
                 let contestantInfo = playerData[i];
                 contestantInfo.hexColor = Array.from({ length: 3 }, () => Math.floor(Math.random() * (256 - 120) + 120).toString(16).padStart(2, '0')).join('');
@@ -944,6 +944,8 @@
         async function gotoQandAPage() {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('is-active'));
             document.getElementById('q_and_a').classList.add('is-active');
+            document.getElementById('questions-caption').innerText = 'Hello! Do you have any questions?';
+            tts('Hello! Do you have any questions?', Speakers.PROFESSOR);
             state = States.Q_AND_A;
         }
 
@@ -1141,7 +1143,7 @@
             currentSlideIndex = slideIndex;
             currentSlide = presentation.slides[currentSlideIndex];
             const converter = new showdown.Converter();
-            const slideHtml = converter.makeHtml(currentSlide.textContent);
+            const slideHtml = converter.makeHtml(currentSlide.textContent.replace(/•/g, '-'));
             const slideElement = document.getElementById('slide');
             slideElement.innerHTML = `<div>${slideHtml}</div>`;
             let nextSlideButton = document.getElementById('next-slide-button');
@@ -1315,7 +1317,7 @@
                             }
                         }
                     } else if (cmd === Commands.ASK_QUESTION_ANSWER_PART) {
-                        const teachButton = document.getElementById('question-recording-button');
+                        const questionsButton = document.getElementById('question-recording-button');
                         whoIsTalking = Speakers.PROFESSOR;
                         questionsButton.innerText = 'Answering...';
                         responseText += jsonData.text + ' ';
